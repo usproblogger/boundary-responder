@@ -140,13 +140,14 @@
       font-size: 0.85rem;
     }
     .status-toast { font-size: 0.85rem; color: var(--ok); margin-left: 4px; }
+    .error-text { color: #f87171; font-size: 0.9rem; }
   </style>
 </head>
 <body>
   <header>
     <div>
       <h1 id="uiTitle">Контроль границ / Boundary Responder</h1>
-      <div id="uiSubtitle" class="subtitle">Убираем эмоциональные крючки · Держим позицию · Без оправданий</div>
+      <div id="uiSubtitle" class="subtitle">AI-разбор крючков · Удержание границ · Без JADE</div>
     </div>
     <div class="header-controls">
       <button class="secondary" id="uiLangBtn" onclick="toggleUiLang()">EN / RU</button>
@@ -155,19 +156,16 @@
   </header>
 
   <div id="settingsPanel" class="card" style="display:none;">
-    <label id="lblProvider">Режим работы (Офлайн работает без ключей API)</label>
-    <select id="provider" onchange="saveSettings()">
-      <option value="offline">Offline / Офлайн (Бесплатно и мгновенно)</option>
-      <option value="groq">Groq API (Свой ключ / BYOK)</option>
-      <option value="openai">OpenAI API (Свой ключ / BYOK)</option>
-      <option value="gemini">Gemini API (Свой ключ / BYOK)</option>
+    <label id="lblProvider">AI Провайдер</label>
+    <select id="provider" onchange="onProviderChange()">
+      <option value="gemini">Gemini API</option>
+      <option value="groq">Groq API</option>
+      <option value="openai">OpenAI API</option>
     </select>
-    <div id="apiFields" style="display:none;">
-      <label id="lblApiKey">API Ключ (сохраняется только в вашем браузере)</label>
-      <input type="password" id="apiKey" placeholder="Вставьте API ключ..." onchange="saveSettings()" />
-      <label id="lblModel">Модель (Model Name)</label>
-      <input type="text" id="modelName" placeholder="llama-3.1-8b-instant, gpt-4o-mini, gemini-2.5-flash" onchange="saveSettings()" />
-    </div>
+    <label id="lblApiKey">API Ключ (сохраняется только в вашем браузере)</label>
+    <input type="password" id="apiKey" placeholder="Вставьте API ключ..." onchange="saveSettings()" />
+    <label id="lblModel">Модель (Model ID)</label>
+    <input type="text" id="modelName" placeholder="gemini-3.5-flash-lite" onchange="saveSettings()" />
   </div>
 
   <div class="card">
@@ -178,7 +176,7 @@
 
   <div class="card">
     <div class="label-row">
-      <label id="lblIncoming" for="incoming">1. Вставьте или продиктуйте сообщение (на русском или английском)</label>
+      <label id="lblIncoming" for="incoming">1. Вставьте или продиктуйте сообщение (RU / EN)</label>
       <button type="button" class="secondary" id="btnMic" onclick="toggleMic()">Микрофон / Mic</button>
     </div>
     <textarea id="incoming" placeholder="Вставьте сообщение или нажмите «Микрофон / Mic»..."></textarea>
@@ -203,11 +201,11 @@
       </div>
     </div>
 
-    <button id="btnGenerate" onclick="analyzeAndGenerate()" style="width:100%;">Разобрать крючки и создать ответ</button>
+    <button id="btnGenerate" onclick="analyzeWithAI()" style="width:100%;">Разобрать через AI и создать ответ</button>
   </div>
 
   <div id="outputCard" class="card" style="display:none;">
-    <label id="lblHooks">Обнаруженные манипуляции и крючки</label>
+    <label id="lblHooks">Обнаруженные крючки (AI)</label>
     <div id="hooksList" style="margin-bottom:12px;"></div>
 
     <label id="lblFact">Сухой факт (без эмоционального давления)</label>
@@ -236,16 +234,22 @@
     let recognition = null;
     let isRecording = false;
 
+    const DEFAULT_MODELS = {
+      gemini: "gemini-3.5-flash-lite",
+      groq: "openai/gpt-oss-20b",
+      openai: "gpt-4o-mini"
+    };
+
     const UI_TEXT = {
       ru: {
         title: "Контроль границ / Boundary Responder",
-        subtitle: "Убираем эмоциональные крючки · Держим позицию · Без оправданий",
+        subtitle: "AI-разбор крючков · Удержание границ · Без JADE",
         settingsBtn: "API Настройки",
-        provider: "Режим работы (Офлайн работает без ключей API)",
+        provider: "AI Провайдер",
         apiKey: "API Ключ (сохраняется только в вашем браузере)",
-        model: "Модель (Model Name)",
+        model: "Модель (Model ID)",
         grounding: "<strong>Позиция Взрослого:</strong> Вы не обязаны обслуживать чужую тревогу, скуку или одиночество. Не используйте <strong>JADE</strong>: не оправдывайтесь, не спорьте, не защищайтесь и не объясняйте лишнего.",
-        incoming: "1. Вставьте или продиктуйте сообщение (на русском или английском)",
+        incoming: "1. Вставьте или продиктуйте сообщение (RU / EN)",
         placeholder: "Вставьте сообщение или нажмите «Микрофон / Mic»...",
         micStart: "Микрофон / Mic",
         micStop: "Стоп / Stop",
@@ -257,8 +261,8 @@
         optGray: "Gray Rock (Серый камень: сухо и по факту)",
         optFirm: "Firm Limit (Жёсткая граница и рамка времени)",
         replyLang: "3. Язык ответа (Output Language)",
-        btnGenerate: "Разобрать крючки и создать ответ",
-        hooks: "Обнаруженные манипуляции и крючки",
+        btnGenerate: "Разобрать через AI и создать ответ",
+        hooks: "Обнаруженные крючки (AI)",
         fact: "Сухой факт (без эмоционального давления)",
         reply: "Готовый ответ с удержанием границ",
         btnCopy: "Скопировать ответ",
@@ -267,17 +271,18 @@
         btnClearLog: "Очистить журнал",
         copied: "Скопировано!",
         saved: "Сохранено!",
-        emptyLog: "Записей пока нет."
+        emptyLog: "Записей пока нет.",
+        missingKey: "Укажите API ключ в настройках API перед запуском."
       },
       en: {
         title: "Boundary & Enmeshment Responder",
-        subtitle: "Strip emotional hooks · Hold your frame · No JADE",
+        subtitle: "AI hook analysis · Hold your frame · No JADE",
         settingsBtn: "API Settings",
-        provider: "Mode / Provider (Offline works with zero API keys)",
+        provider: "AI Provider",
         apiKey: "API Key (Stored locally in your browser)",
-        model: "Model Name",
+        model: "Model ID",
         grounding: "<strong>Adult Ego-State Check:</strong> You are not responsible for regulating another adult's boredom, loneliness, or anxiety. Do not <strong>J</strong>ustify, <strong>A</strong>rgue, <strong>D</strong>efend, or <strong>E</strong>xplain.",
-        incoming: "1. Paste or Dictate Incoming Message (Russian or English)",
+        incoming: "1. Paste or Dictate Incoming Message (RU / EN)",
         placeholder: "Paste a message or press Mic to speak...",
         micStart: "Mic / Speak",
         micStop: "Stop Mic",
@@ -289,8 +294,8 @@
         optGray: "Gray Rock (Minimal, neutral, factual)",
         optFirm: "Firm Limit (Clear boundary & timeline)",
         replyLang: "3. Reply Language (Output Language)",
-        btnGenerate: "Analyze Hooks & Draft Reply",
-        hooks: "Detected Enmeshment / Manipulation Hooks",
+        btnGenerate: "Analyze with AI & Draft Reply",
+        hooks: "Detected Enmeshment / Manipulation Hooks (AI)",
         fact: "Literal Core Fact (Without Emotional Subtext)",
         reply: "Suggested Boundary-Safe Reply",
         btnCopy: "Copy Reply",
@@ -299,7 +304,8 @@
         btnClearLog: "Clear Log",
         copied: "Copied!",
         saved: "Saved!",
-        emptyLog: "No saved entries yet."
+        emptyLog: "No saved entries yet.",
+        missingKey: "Enter an API key in API Settings before generating."
       }
     };
 
@@ -336,6 +342,32 @@
       uiLang = uiLang === "ru" ? "en" : "ru";
       localStorage.setItem("ber_uilang", uiLang);
       applyUiLang();
+    }
+
+    window.onload = () => {
+      const savedProvider = localStorage.getItem("ber_provider") || "gemini";
+      document.getElementById("provider").value = savedProvider;
+      document.getElementById("apiKey").value = localStorage.getItem("ber_apikey") || "";
+      document.getElementById("modelName").value = localStorage.getItem("ber_model") || DEFAULT_MODELS[savedProvider];
+      document.getElementById("lang").value = localStorage.getItem("ber_replylang") || "auto";
+      applyUiLang();
+    };
+
+    function toggleSettings() {
+      const p = document.getElementById("settingsPanel");
+      p.style.display = p.style.display === "none" ? "block" : "none";
+    }
+
+    function onProviderChange() {
+      const provider = document.getElementById("provider").value;
+      document.getElementById("modelName").value = DEFAULT_MODELS[provider] || "";
+      saveSettings();
+    }
+
+    function saveSettings() {
+      localStorage.setItem("ber_provider", document.getElementById("provider").value);
+      localStorage.setItem("ber_apikey", document.getElementById("apiKey").value.trim());
+      localStorage.setItem("ber_model", document.getElementById("modelName").value.trim());
     }
 
     function toggleMic() {
@@ -397,174 +429,51 @@
       recognition.start();
     }
 
-    window.onload = () => {
-      document.getElementById("provider").value = localStorage.getItem("ber_provider") || "offline";
-      document.getElementById("apiKey").value = localStorage.getItem("ber_apikey") || "";
-      document.getElementById("modelName").value = localStorage.getItem("ber_model") || "llama-3.1-8b-instant";
-      document.getElementById("lang").value = localStorage.getItem("ber_replylang") || "auto";
-      toggleApiFields();
-      applyUiLang();
-    };
-
-    function toggleSettings() {
-      const p = document.getElementById("settingsPanel");
-      p.style.display = p.style.display === "none" ? "block" : "none";
-    }
-
-    function toggleApiFields() {
-      const provider = document.getElementById("provider").value;
-      document.getElementById("apiFields").style.display = provider === "offline" ? "none" : "block";
-    }
-
-    function saveSettings() {
-      localStorage.setItem("ber_provider", document.getElementById("provider").value);
-      localStorage.setItem("ber_apikey", document.getElementById("apiKey").value.trim());
-      localStorage.setItem("ber_model", document.getElementById("modelName").value.trim());
-      toggleApiFields();
-    }
-
     function detectLanguage(text) {
       return /[а-яА-ЯёЁ]/.test(text) ? "ru" : "en";
     }
 
-    function detectPatterns(text, displayLang) {
-      const t = text.toLowerCase();
-      const hooks = [];
-
-      if (/(волнуюсь|переживаю|не хочешь|игнорируешь|обид|забыл|бросил|сердце|давление|worry|worried|ignore|don't care|hurt|forgot)/.test(t)) {
-        hooks.push(displayLang === "ru"
-          ? "Навязывание вины / Перенос ответственности за эмоции"
-          : "Guilt Induction / Emotional Responsibility Transfer");
-      }
-      if (/(он думает|она говорит|люди скажут|новый муж|друзья|посторонн|неправильно ждать|he thinks|she says|third person|new husband|friends)/.test(t)) {
-        hooks.push(displayLang === "ru"
-          ? "Триангуляция / Говорение в третьем лице"
-          : "Triangulation / Third-Person Framing");
-      }
-      if (/(срочно|прямо сейчас|сколько можно|ждать|немедленно|почему не звонишь|urgent|right now|waiting|immediately|why don't you call)/.test(t)) {
-        hooks.push(displayLang === "ru"
-          ? "Искусственная срочность / Давление по времени"
-          : "Manufactured Urgency / Timeline Pressure");
-      }
-      if (/(деньги|дорого|тратить|не надо|беспокоить|купить|money|expensive|spend|waste|bother)/.test(t)) {
-        hooks.push(displayLang === "ru"
-          ? "Вторжение в автономию / Финансовый или бытовой контроль"
-          : "Autonomy Intrusion / Financial or Logistical Control");
-      }
-      if (hooks.length === 0) {
-        hooks.push(displayLang === "ru"
-          ? "Обычная проверка связи / Фоновое слияние"
-          : "General Check-In / Low-Grade Enmeshment");
-      }
-      return hooks;
-    }
-
-    function offlineGenerate(text, stance, outLang) {
-      const t = text.toLowerCase();
-      const hasThirdPerson = /(он думает|она говорит|новый муж|друзья|he thinks|she says|new husband|friends)/.test(t);
-      const hasUrgency = /(волнуюсь|переживаю|срочно|не хочешь|ждать|позвонить|worry|urgent|call|waiting)/.test(t);
-      const hasLogistics = /(посылк|отправ|код|регистр|коробк|тест|пакет|package|send|code|box|kit|ship)/.test(t);
-
-      let fact = "";
-      let reply = "";
-
-      if (outLang === "ru") {
-        if (hasLogistics) {
-          fact = "Собеседник передаёт информацию по текущим организационным делам и ждёт подтверждения.";
-        } else if (hasThirdPerson) {
-          fact = "Собеседник выражает недовольство ожиданием, используя формулировки в третьем лице.";
-        } else {
-          fact = "Собеседник хочет получить подтверждение связи и вашего внимания.";
-        }
-
-        if (stance === "gray") {
-          reply = hasLogistics
-            ? "Хорошо, принял к сведению. Спасибо."
-            : "Привет. Всё в порядке, я сейчас занят делами. Как освобожусь — напишу или позвоню.";
-        } else if (stance === "firm") {
-          reply = "Я сейчас занят и не могу обсуждать это на бегу. Как и договаривались, свяжусь, когда освобожусь.";
-        } else {
-          if (hasThirdPerson) {
-            reply = "Свой круг общения и друзья — это всегда здорово. Я сейчас доделываю дела и, как и обещал, позвоню, как только освобожусь.";
-          } else if (hasLogistics && hasUrgency) {
-            reply = "Не волнуйся, всё в порядке! Спасибо, что всё уточнила и держишь в курсе. Я сейчас в делах, позвоню тебе, как только освобожусь, чтобы спокойно всё обсудить.";
-          } else if (hasLogistics) {
-            reply = "Спасибо, что написала и уточнила детали! Отличный вариант, я согласен. Позвоню тебе позже, как освобожусь.";
-          } else if (hasUrgency) {
-            reply = "Не волнуйся, всё хорошо! Я просто сейчас занят делами. Наберу тебе, как только освобожусь.";
-          } else {
-            reply = "Спасибо, что написала! Всё в порядке, я сейчас в делах. Свяжусь с тобой позже, как освобожусь.";
-          }
-        }
-      } else {
-        if (hasLogistics) {
-          fact = "The sender is sharing a logistical update and looking for confirmation.";
-        } else if (hasThirdPerson) {
-          fact = "The sender is expressing impatience using third-person framing.";
-        } else {
-          fact = "The sender wants reassurance and immediate contact.";
-        }
-
-        if (stance === "gray") {
-          reply = hasLogistics
-            ? "Got it, thank you for the update."
-            : "Hi. Everything is fine, I'm busy right now. I'll reach out once I'm free.";
-        } else if (stance === "firm") {
-          reply = "I'm tied up at the moment and can't talk right now. I will call when my schedule opens up, as planned.";
-        } else {
-          if (hasThirdPerson) {
-            reply = "Having friends and your own social circle is always great. I'm wrapping up a few things right now and will call as soon as I'm free.";
-          } else if (hasLogistics) {
-            reply = "Thanks for checking on that and sharing the update! That plan sounds good. I'll call you once I'm free so we can go over it calmly.";
-          } else if (hasUrgency) {
-            reply = "No need to worry, everything is fine! I'm just tied up with work right now and will call you as soon as I'm free.";
-          } else {
-            reply = "Thanks for checking in! Things are going well—I'm in the middle of a few tasks and will reach out later today.";
-          }
-        }
-      }
-
-      return { fact, reply };
-    }
-
-    async function analyzeAndGenerate() {
+    async function analyzeWithAI() {
       const incoming = document.getElementById("incoming").value.trim();
       if (!incoming) return;
 
+      const provider = document.getElementById("provider").value;
+      const apiKey = document.getElementById("apiKey").value.trim();
+      const model = document.getElementById("modelName").value.trim() || DEFAULT_MODELS[provider];
       const stance = document.getElementById("stance").value;
       const selectedLang = document.getElementById("lang").value;
       localStorage.setItem("ber_replylang", selectedLang);
 
       const outLang = selectedLang === "auto" ? detectLanguage(incoming) : selectedLang;
-      const provider = document.getElementById("provider").value;
-      const apiKey = document.getElementById("apiKey").value.trim();
-      const model = document.getElementById("modelName").value.trim();
 
-      const hooks = detectPatterns(incoming, uiLang);
-      document.getElementById("hooksList").innerHTML = hooks.map(h => `<span class="tag">${h}</span>`).join("");
       document.getElementById("outputCard").style.display = "block";
-      document.getElementById("replyText").textContent = uiLang === "ru" ? "Генерация..." : "Generating...";
+      document.getElementById("hooksList").innerHTML = "";
+      document.getElementById("coreFact").textContent = "";
+      document.getElementById("replyText").className = "reply-box";
 
-      if (provider === "offline" || !apiKey) {
-        const res = offlineGenerate(incoming, stance, outLang);
-        document.getElementById("coreFact").textContent = res.fact;
-        document.getElementById("replyText").textContent = res.reply;
+      if (!apiKey) {
+        document.getElementById("replyText").className = "reply-box error-text";
+        document.getElementById("replyText").textContent = UI_TEXT[uiLang].missingKey;
+        document.getElementById("settingsPanel").style.display = "block";
         return;
       }
 
+      document.getElementById("replyText").textContent = uiLang === "ru" ? "AI анализирует сообщение..." : "AI analyzing message...";
+
       const systemPrompt = `You are a clinical communication coach specializing in family enmeshment, codependency, and Transactional Analysis (Adult ego state).
-The user may input text in Russian or English.
-1. Extract the literal logistical fact in 1 short sentence in ${uiLang === "ru" ? "Russian" : "English"} (stripping guilt, triangulation, or urgency).
-2. Draft a concise reply in ${outLang === "ru" ? "Russian" : "English"} using the "${stance}" boundary style:
+Analyze the incoming message (which may be in Russian or English).
+1. Identify up to 3 specific manipulation, guilt, triangulation, urgency, or enmeshment tactics in "hooks" written in ${uiLang === "ru" ? "Russian" : "English"}.
+2. Extract the literal logistical fact in 1 short sentence in ${uiLang === "ru" ? "Russian" : "English"} (stripping guilt, triangulation, or urgency).
+3. Draft a concise, natural reply in ${outLang === "ru" ? "Russian" : "English"} tailored specifically to this message using the "${stance}" boundary stance:
    - "gray": minimal, neutral, zero emotional fuel.
-   - "medium": warm, polite, validates autonomy, refuses guilt/responsibility transfer.
+   - "medium": warm, polite, validates autonomy, refuses guilt or responsibility transfer.
    - "firm": clear boundary and timeline, zero JADE (Justify, Argue, Defend, Explain).
-Return valid JSON: {"fact": "...", "reply": "..."}`;
+Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
 
       try {
-        let jsonResponse;
+        let parsed;
         if (provider === "gemini") {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model || "gemini-2.5-flash"}:generateContent?key=${apiKey}`;
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
           const r = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -573,8 +482,13 @@ Return valid JSON: {"fact": "...", "reply": "..."}`;
               generationConfig: { responseMimeType: "application/json" }
             })
           });
+          if (!r.ok) {
+            const errBody = await r.text();
+            throw new Error(`Gemini API ${r.status}: ${errBody}`);
+          }
           const data = await r.json();
-          jsonResponse = JSON.parse(data.candidates[0].content.parts[0].text);
+          const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+          parsed = JSON.parse(raw);
         } else {
           const endpoint = provider === "groq"
             ? "https://api.groq.com/openai/v1/chat/completions"
@@ -586,7 +500,7 @@ Return valid JSON: {"fact": "...", "reply": "..."}`;
               "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-              model: model || (provider === "groq" ? "llama-3.1-8b-instant" : "gpt-4o-mini"),
+              model,
               messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: incoming }
@@ -594,16 +508,21 @@ Return valid JSON: {"fact": "...", "reply": "..."}`;
               response_format: { type: "json_object" }
             })
           });
+          if (!r.ok) {
+            const errBody = await r.text();
+            throw new Error(`${provider.toUpperCase()} API ${r.status}: ${errBody}`);
+          }
           const data = await r.json();
-          jsonResponse = JSON.parse(data.choices[0].message.content);
+          parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
         }
 
-        document.getElementById("coreFact").textContent = jsonResponse.fact;
-        document.getElementById("replyText").textContent = jsonResponse.reply;
+        const hooksArr = Array.isArray(parsed.hooks) && parsed.hooks.length > 0 ? parsed.hooks : ["AI Analysis"];
+        document.getElementById("hooksList").innerHTML = hooksArr.map(h => `<span class="tag">${h}</span>`).join("");
+        document.getElementById("coreFact").textContent = parsed.fact || "";
+        document.getElementById("replyText").textContent = parsed.reply || "";
       } catch (err) {
-        const fallback = offlineGenerate(incoming, stance, outLang);
-        document.getElementById("coreFact").textContent = `${fallback.fact} (Offline fallback)`;
-        document.getElementById("replyText").textContent = fallback.reply;
+        document.getElementById("replyText").className = "reply-box error-text";
+        document.getElementById("replyText").textContent = err.message || String(err);
       }
     }
 
