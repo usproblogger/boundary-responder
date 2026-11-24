@@ -15,6 +15,7 @@
       --accent-hover: #0284c7;
       --warn: #f59e0b;
       --ok: #10b981;
+      --rec: #ef4444;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -46,6 +47,14 @@
       padding: 16px;
       margin-bottom: 16px;
     }
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
     label {
       display: block;
       font-size: 0.85rem;
@@ -53,6 +62,7 @@
       margin-bottom: 6px;
       color: var(--muted);
     }
+    .label-row label { margin-bottom: 0; }
     textarea, input, select {
       width: 100%;
       background: #0f172a;
@@ -86,6 +96,11 @@
       font-size: 0.85rem;
     }
     button.secondary:hover { background: #334155; }
+    button.mic-active {
+      background: var(--rec);
+      border-color: var(--rec);
+      color: #fff;
+    }
     .tag {
       display: inline-block;
       background: rgba(245, 158, 11, 0.15);
@@ -105,7 +120,7 @@
       white-space: pre-wrap;
       font-size: 0.95rem;
     }
-    .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
     .grounding {
       border-left: 3px solid var(--ok);
       padding-left: 12px;
@@ -124,7 +139,7 @@
       margin-top: 10px;
       font-size: 0.85rem;
     }
-    .status-toast { font-size: 0.85rem; color: var(--ok); margin-left: 8px; }
+    .status-toast { font-size: 0.85rem; color: var(--ok); margin-left: 4px; }
   </style>
 </head>
 <body>
@@ -162,8 +177,12 @@
   </div>
 
   <div class="card">
-    <label id="lblIncoming" for="incoming">1. Вставьте входящее сообщение (на русском или английском)</label>
-    <textarea id="incoming" placeholder="Вставьте сообщение от родителя или родственника..."></textarea>
+    <div class="label-row">
+      <label id="lblIncoming" for="incoming">1. Вставьте или продиктуйте сообщение (на русском или английском)</label>
+      <button type="button" class="secondary" id="btnMic" onclick="toggleMic()">Микрофон / Mic</button>
+    </div>
+    <textarea id="incoming" placeholder="Вставьте сообщение или нажмите «Микрофон / Mic»..."></textarea>
+    <div id="micStatus" class="status-toast" style="margin-bottom:10px;"></div>
 
     <div class="row">
       <div>
@@ -214,6 +233,8 @@
 
   <script>
     let uiLang = localStorage.getItem("ber_uilang") || "ru";
+    let recognition = null;
+    let isRecording = false;
 
     const UI_TEXT = {
       ru: {
@@ -224,8 +245,13 @@
         apiKey: "API Ключ (сохраняется только в вашем браузере)",
         model: "Модель (Model Name)",
         grounding: "<strong>Позиция Взрослого:</strong> Вы не обязаны обслуживать чужую тревогу, скуку или одиночество. Не используйте <strong>JADE</strong>: не оправдывайтесь, не спорьте, не защищайтесь и не объясняйте лишнего.",
-        incoming: "1. Вставьте входящее сообщение (на русском или английском)",
-        placeholder: "Вставьте сообщение от родителя или родственника...",
+        incoming: "1. Вставьте или продиктуйте сообщение (на русском или английском)",
+        placeholder: "Вставьте сообщение или нажмите «Микрофон / Mic»...",
+        micStart: "Микрофон / Mic",
+        micStop: "Стоп / Stop",
+        micListening: "Слушаю... говорите.",
+        micUnsupported: "Голосовой ввод не поддерживается в этом браузере.",
+        micDenied: "Доступ к микрофону запрещён или произошла ошибка.",
         stance: "2. Стиль границ",
         optMedium: "Medium Chill (Спокойно, тепло, без вовлечения)",
         optGray: "Gray Rock (Серый камень: сухо и по факту)",
@@ -251,8 +277,13 @@
         apiKey: "API Key (Stored locally in your browser)",
         model: "Model Name",
         grounding: "<strong>Adult Ego-State Check:</strong> You are not responsible for regulating another adult's boredom, loneliness, or anxiety. Do not <strong>J</strong>ustify, <strong>A</strong>rgue, <strong>D</strong>efend, or <strong>E</strong>xplain.",
-        incoming: "1. Paste Incoming Message (Russian or English)",
-        placeholder: "Paste the message from your parent or relative here...",
+        incoming: "1. Paste or Dictate Incoming Message (Russian or English)",
+        placeholder: "Paste a message or press Mic to speak...",
+        micStart: "Mic / Speak",
+        micStop: "Stop Mic",
+        micListening: "Listening... speak now.",
+        micUnsupported: "Speech recognition is not supported in this browser.",
+        micDenied: "Microphone permission blocked or speech error occurred.",
         stance: "2. Boundary Stance",
         optMedium: "Medium Chill (Warm, calm, detached)",
         optGray: "Gray Rock (Minimal, neutral, factual)",
@@ -284,6 +315,7 @@
       document.getElementById("uiGrounding").innerHTML = t.grounding;
       document.getElementById("lblIncoming").textContent = t.incoming;
       document.getElementById("incoming").placeholder = t.placeholder;
+      document.getElementById("btnMic").textContent = isRecording ? t.micStop : t.micStart;
       document.getElementById("lblStance").textContent = t.stance;
       document.getElementById("optMedium").textContent = t.optMedium;
       document.getElementById("optGray").textContent = t.optGray;
@@ -304,6 +336,65 @@
       uiLang = uiLang === "ru" ? "en" : "ru";
       localStorage.setItem("ber_uilang", uiLang);
       applyUiLang();
+    }
+
+    function toggleMic() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const statusEl = document.getElementById("micStatus");
+      const btnMic = document.getElementById("btnMic");
+
+      if (!SpeechRec) {
+        statusEl.textContent = UI_TEXT[uiLang].micUnsupported;
+        return;
+      }
+
+      if (isRecording && recognition) {
+        recognition.stop();
+        return;
+      }
+
+      recognition = new SpeechRec();
+      const forcedLang = document.getElementById("lang").value;
+      if (forcedLang === "en") {
+        recognition.lang = "en-US";
+      } else if (forcedLang === "ru") {
+        recognition.lang = "ru-RU";
+      } else {
+        recognition.lang = uiLang === "ru" ? "ru-RU" : "en-US";
+      }
+
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        isRecording = true;
+        btnMic.classList.add("mic-active");
+        btnMic.textContent = UI_TEXT[uiLang].micStop;
+        statusEl.textContent = UI_TEXT[uiLang].micListening;
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        const ta = document.getElementById("incoming");
+        ta.value = ta.value ? `${ta.value.trim()} ${transcript}` : transcript;
+      };
+
+      recognition.onerror = () => {
+        statusEl.textContent = UI_TEXT[uiLang].micDenied;
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        btnMic.classList.remove("mic-active");
+        btnMic.textContent = UI_TEXT[uiLang].micStart;
+        setTimeout(() => {
+          if (!isRecording && statusEl.textContent === UI_TEXT[uiLang].micListening) {
+            statusEl.textContent = "";
+          }
+        }, 1500);
+      };
+
+      recognition.start();
     }
 
     window.onload = () => {
