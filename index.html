@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boundary & Enmeshment Responder</title>
+  <title>Boundary &amp; Enmeshment Responder</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -120,16 +120,6 @@
       white-space: pre-wrap;
       font-size: 0.95rem;
     }
-    .summary-box {
-      background: #0f172a;
-      border-left: 3px solid var(--accent);
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 12px;
-      white-space: pre-wrap;
-      font-size: 0.92rem;
-      color: #e2e8f0;
-    }
     .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
     .grounding {
       border-left: 3px solid var(--ok);
@@ -230,14 +220,8 @@
     <div class="actions">
       <button id="btnCopy" onclick="copyReply()">Скопировать ответ</button>
       <button class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Озвучить / Speak</button>
-      <button class="secondary" id="btnSummary" onclick="summarizeOutput()">Сжать (1–2 предл.) / Summary</button>
       <button class="secondary" id="btnSave" onclick="saveToLog()">Сохранить в журнал</button>
       <span id="copyStatus" class="status-toast"></span>
-    </div>
-
-    <div id="summaryWrap" style="display:none;">
-      <label id="lblSummaryOut" style="margin-top:12px;">Короткий вывод (макс. 1–2 предложения)</label>
-      <div id="summaryText" class="summary-box"></div>
     </div>
   </div>
 
@@ -293,9 +277,6 @@
         btnSpeak: "Озвучить / Speak",
         btnStopSpeak: "Стоп / Stop",
         ttsUnsupported: "Озвучивание не поддерживается в этом браузере.",
-        btnSummary: "Сжать (1–2 предл.) / Summary",
-        summaryOut: "Короткий вывод (макс. 1–2 предложения)",
-        summarizing: "Сжимаю до 1–2 предложений...",
         btnSave: "Сохранить в журнал",
         logSummary: "Личный журнал границ (хранится локально в браузере)",
         btnClearLog: "Очистить журнал",
@@ -336,9 +317,6 @@
         btnSpeak: "Speak Reply",
         btnStopSpeak: "Stop Speaking",
         ttsUnsupported: "Text-to-speech is not supported in this browser.",
-        btnSummary: "Summary (1–2 sentences)",
-        summaryOut: "Short Summary (1–2 sentences max)",
-        summarizing: "Summarizing into 1–2 sentences...",
         btnSave: "Save to Private Log",
         logSummary: "Private Boundary Log (Stored Locally)",
         btnClearLog: "Clear Log",
@@ -367,13 +345,6 @@ Analyze the incoming message (which may be in Russian or English).
 Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
     }
 
-    function capToTwoSentences(text) {
-      const clean = text.replace(/\s+/g, " ").trim();
-      if (!clean) return "";
-      const matches = clean.match(/[^.!?…]+(?:[.!?…]+|$)/g) || [clean];
-      return matches.slice(0, 2).join(" ").trim();
-    }
-
     function applyUiLang() {
       const t = UI_TEXT[uiLang];
       document.documentElement.lang = uiLang;
@@ -399,8 +370,6 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
       document.getElementById("lblReply").textContent = t.reply;
       document.getElementById("btnCopy").textContent = t.btnCopy;
       document.getElementById("btnSpeak").textContent = isSpeaking ? t.btnStopSpeak : t.btnSpeak;
-      document.getElementById("btnSummary").textContent = t.btnSummary;
-      document.getElementById("lblSummaryOut").textContent = t.summaryOut;
       document.getElementById("btnSave").textContent = t.btnSave;
       document.getElementById("lblLogSummary").textContent = t.logSummary;
       document.getElementById("btnClearLog").textContent = t.btnClearLog;
@@ -624,11 +593,7 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
         return;
       }
 
-      const summaryVisible = document.getElementById("summaryWrap").style.display !== "none";
-      const summaryVal = document.getElementById("summaryText").textContent.trim();
-      const text = (summaryVisible && summaryVal)
-        ? summaryVal
-        : document.getElementById("replyText").textContent.trim();
+      const text = document.getElementById("replyText").textContent.trim();
       if (!text) return;
 
       window.speechSynthesis.cancel();
@@ -655,68 +620,6 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
       window.speechSynthesis.speak(utterance);
     }
 
-    async function summarizeOutput() {
-      const apiKey = document.getElementById("apiKey").value.trim();
-      let model = document.getElementById("modelName").value.trim();
-      if (!model || model === "llama-3.1-8b-instant") {
-        model = DEFAULT_GROQ_MODEL;
-        document.getElementById("modelName").value = model;
-        saveSettings();
-      }
-
-      const fact = document.getElementById("coreFact").textContent.trim();
-      const reply = document.getElementById("replyText").textContent.trim();
-      const sourceText = [fact, reply].filter(Boolean).join("\n");
-      if (!sourceText) return;
-
-      const wrap = document.getElementById("summaryWrap");
-      const box = document.getElementById("summaryText");
-      wrap.style.display = "block";
-      box.className = "summary-box";
-
-      if (!apiKey) {
-        box.className = "summary-box error-text";
-        box.textContent = UI_TEXT[uiLang].missingKey;
-        document.getElementById("settingsPanel").style.display = "block";
-        return;
-      }
-
-      box.textContent = UI_TEXT[uiLang].summarizing;
-      const targetLang = detectLanguage(reply || sourceText) === "ru" ? "Russian" : "English";
-
-      try {
-        const r = await fetch(GROQ_CHAT_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              {
-                role: "system",
-                content: `Summarize the situation and boundary response in strictly 1 or 2 sentences maximum (never 3 or more sentences). Write in ${targetLang}. Be clear, grounded, and concise.`
-              },
-              { role: "user", content: sourceText }
-            ]
-          })
-        });
-
-        if (!r.ok) {
-          const errBody = await r.text();
-          throw new Error(`GROQ API ${r.status}: ${errBody}`);
-        }
-
-        const data = await r.json();
-        const rawSummary = data.choices?.[0]?.message?.content || "";
-        box.textContent = capToTwoSentences(rawSummary);
-      } catch (err) {
-        box.className = "summary-box error-text";
-        box.textContent = err.message || String(err);
-      }
-    }
-
     function parseModelOutput(rawText) {
       const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
       try {
@@ -738,8 +641,6 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
       if (!incoming) return;
 
       stopSpeaking();
-      document.getElementById("summaryWrap").style.display = "none";
-      document.getElementById("summaryText").textContent = "";
 
       const apiKey = document.getElementById("apiKey").value.trim();
       let model = document.getElementById("modelName").value.trim();
@@ -814,11 +715,7 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
     }
 
     function copyReply() {
-      const summaryVisible = document.getElementById("summaryWrap").style.display !== "none";
-      const summaryVal = document.getElementById("summaryText").textContent.trim();
-      const text = (summaryVisible && summaryVal)
-        ? summaryVal
-        : document.getElementById("replyText").textContent;
+      const text = document.getElementById("replyText").textContent;
       navigator.clipboard.writeText(text);
       showStatus(UI_TEXT[uiLang].copied);
     }
