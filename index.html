@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boundary &amp; Enmeshment Responder</title>
+  <title>Boundary & Enmeshment Responder</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -13,6 +13,8 @@
       --muted: #94a3b8;
       --accent: #38bdf8;
       --accent-hover: #0284c7;
+      --secondary-btn: #6366f1;
+      --secondary-hover: #4f46e5;
       --warn: #f59e0b;
       --ok: #10b981;
       --rec: #ef4444;
@@ -76,17 +78,29 @@
     textarea { min-height: 110px; resize: vertical; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     @media (max-width: 540px) { .row { grid-template-columns: 1fr; } }
+    .mode-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    @media (max-width: 540px) { .mode-buttons { grid-template-columns: 1fr; } }
     button {
       background: var(--accent);
       color: #0f172a;
       border: none;
       border-radius: 8px;
-      padding: 10px 16px;
-      font-size: 0.95rem;
+      padding: 11px 14px;
+      font-size: 0.92rem;
       font-weight: 700;
       cursor: pointer;
     }
     button:hover { background: var(--accent-hover); color: #fff; }
+    button.mode-advice {
+      background: var(--secondary-btn);
+      color: #fff;
+    }
+    button.mode-advice:hover { background: var(--secondary-hover); }
     button.secondary {
       background: transparent;
       border: 1px solid var(--border);
@@ -110,6 +124,17 @@
       border-radius: 6px;
       font-size: 0.8rem;
       margin: 0 6px 6px 0;
+    }
+    .mode-badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      margin-bottom: 10px;
+      font-weight: 600;
     }
     .reply-box {
       background: #0f172a;
@@ -173,7 +198,7 @@
 
   <div class="card">
     <div id="uiGrounding" class="grounding">
-      <strong>Автономия взрослого:</strong> Вы — отдельный взрослый человек со своей жизнью и отношениями. Родительские проекции их собственных связей, ожиданий и тревог — это их история, а не ваше расписание. Не используйте <strong>JADE</strong>.
+      <strong>Автономия взрослого:</strong> Слияние и созависимость работают в обе стороны — важно держать свои границы без жёсткого контроля и без JADE, отделяя чужие проекции отношений от собственной жизни.
     </div>
   </div>
 
@@ -204,21 +229,26 @@
       </div>
     </div>
 
-    <button id="btnGenerate" onclick="analyzeWithGroq()" style="width:100%;">Разобрать через Groq и создать ответ</button>
+    <div class="mode-buttons">
+      <button id="btnReplyMother" onclick="runGroqMode('mother')">Ответ маме (без контроля)</button>
+      <button id="btnAdviceView" class="mode-advice" onclick="runGroqMode('advice')">Взгляд сверху и совет</button>
+    </div>
   </div>
 
   <div id="outputCard" class="card" style="display:none;">
+    <div id="modeBadge" class="mode-badge"></div>
+
     <label id="lblHooks">Обнаруженные крючки и проекции</label>
     <div id="hooksList" style="margin-bottom:12px;"></div>
 
     <label id="lblFact">Сухой факт (без проекций и давления)</label>
     <div id="coreFact" style="font-size:0.9rem; color:#cbd5e1; margin-bottom:12px;"></div>
 
-    <label id="lblReply">Готовый ответ с удержанием автономии</label>
+    <label id="lblReply">Результат</label>
     <div id="replyText" class="reply-box"></div>
 
     <div class="actions">
-      <button id="btnCopy" onclick="copyReply()">Скопировать ответ</button>
+      <button id="btnCopy" onclick="copyReply()">Скопировать</button>
       <button class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Озвучить / Speak</button>
       <button class="secondary" id="btnSave" onclick="saveToLog()">Сохранить в журнал</button>
       <span id="copyStatus" class="status-toast"></span>
@@ -243,6 +273,7 @@
     let isRecording = false;
     let isSpeaking = false;
     let baseTranscript = "";
+    let lastMode = "mother";
 
     const UI_TEXT = {
       ru: {
@@ -256,7 +287,7 @@
         fetchingGroq: "Загрузка моделей Groq...",
         groqLoaded: "Загружено моделей: ",
         groqNone: "Активные модели не найдены.",
-        grounding: "<strong>Автономия взрослого:</strong> Вы — отдельный взрослый человек со своей жизнью и отношениями. Родительские проекции их собственных связей, ожиданий и тревог — это их история, а не ваше расписание. Не используйте <strong>JADE</strong>.",
+        grounding: "<strong>Автономия взрослого:</strong> Слияние и созависимость работают в обе стороны — важно держать свои границы без жёсткого контроля и без JADE, отделяя чужие проекции отношений от собственной жизни.",
         incoming: "1. Вставьте или продиктуйте сообщение (RU / EN)",
         placeholder: "Вставьте сообщение или нажмите «Микрофон / Mic»...",
         micStart: "Микрофон / Mic",
@@ -269,11 +300,15 @@
         optGray: "Gray Rock (Серый камень: сухо и по факту)",
         optFirm: "Firm Limit (Жёсткая граница и рамка времени)",
         replyLang: "3. Язык ответа (Output Language)",
-        btnGenerate: "Разобрать через Groq и создать ответ",
+        btnReplyMother: "Ответ маме (без контроля)",
+        btnAdviceView: "Взгляд сверху и совет",
+        badgeMother: "Режим: Ответ маме (без контроля · двусторонняя созависимость учтена)",
+        badgeAdvice: "Режим: Взгляд сверху, субъективность и совет по границам",
         hooks: "Обнаруженные крючки и проекции",
         fact: "Сухой факт (без проекций и давления)",
-        reply: "Готовый ответ с удержанием автономии",
-        btnCopy: "Скопировать ответ",
+        replyMother: "Готовый ответ маме",
+        replyAdvice: "Субъективный отклик, взгляд сверху и совет",
+        btnCopy: "Скопировать",
         btnSpeak: "Озвучить / Speak",
         btnStopSpeak: "Стоп / Stop",
         ttsUnsupported: "Озвучивание не поддерживается в этом браузере.",
@@ -296,7 +331,7 @@
         fetchingGroq: "Fetching Groq models...",
         groqLoaded: "Loaded models: ",
         groqNone: "No active models returned.",
-        grounding: "<strong>Adult Autonomy Check:</strong> You are an independent adult with your own life and relationships. A parent projecting their own relationships with loved ones, expectations, or anxieties onto you is their story, not your obligation. Do not <strong>J</strong>ustify, <strong>A</strong>rgue, <strong>D</strong>efend, or <strong>E</strong>xplain.",
+        grounding: "<strong>Adult Autonomy Check:</strong> Enmeshment and codependency are a two-way street—hold clear boundaries without over-controlling, avoid JADE, and separate a parent's projected relationship scripts from your own life.",
         incoming: "1. Paste or Dictate Incoming Message (RU / EN)",
         placeholder: "Paste a message or press Mic to speak...",
         micStart: "Mic / Speak",
@@ -309,11 +344,15 @@
         optGray: "Gray Rock (Minimal, neutral, factual)",
         optFirm: "Firm Limit (Clear boundary & timeline)",
         replyLang: "3. Reply Language (Output Language)",
-        btnGenerate: "Analyze with Groq & Draft Reply",
+        btnReplyMother: "Reply to Mother (No Over-Control)",
+        btnAdviceView: "View from Above & Advice",
+        badgeMother: "Mode: Reply to Mother (No Over-Control · Two-Way Codependency Aware)",
+        badgeAdvice: "Mode: Subjectivity, View from Above & Boundary Advice",
         hooks: "Detected Enmeshment, Projections & Hooks",
         fact: "Literal Core Fact (Without Projections or Pressure)",
-        reply: "Suggested Autonomy-Preserving Reply",
-        btnCopy: "Copy Reply",
+        replyMother: "Suggested Reply to Mother",
+        replyAdvice: "Subjective Read, View from Above & Advice",
+        btnCopy: "Copy",
         btnSpeak: "Speak Reply",
         btnStopSpeak: "Stop Speaking",
         ttsUnsupported: "Text-to-speech is not supported in this browser.",
@@ -327,21 +366,29 @@
       }
     };
 
-    function buildSystemPrompt(uiLanguage, outLanguage, boundaryStance) {
-      return `You are a clinical communication coach specializing in parent-child enmeshment, codependency, differentiation/independence from parents, and Transactional Analysis (Adult ego state).
-Pay special attention to:
-- Enmeshment and codependency (treating an adult child as an emotional caretaker, extension of self, or on-demand confidant/helper).
-- Independence and differentiation from parents (asserting separate adult boundaries, schedules, choices, and emotional ownership).
-- Relationship projection: when a parent projects their own relationships with loved ones, partners, spouses, friends, or romantic/relational scripts onto the child or uses third-party relational comparisons/triangulation.
-
+    function buildSystemPrompt(mode, uiLanguage, outLanguage, boundaryStance) {
+      const sharedContext = `You are a clinical communication coach specializing in parent-mother and adult-child enmeshment, codependency as a two-way dynamic, differentiation/independence from parents, relationship projection (parents projecting their own relationships with loved ones/partners onto the child), and Transactional Analysis (Adult ego state).
 Analyze the incoming message (which may be in Russian or English).
-1. Identify up to 3 specific dynamics in "hooks" written in ${uiLanguage === "ru" ? "Russian" : "English"} (such as relationship projection, parent-child enmeshment, guilt/codependency hook, autonomy pushback, or triangulation).
-2. Extract the literal core fact in 1 short sentence in ${uiLanguage === "ru" ? "Russian" : "English"}, stripping away relationship projections, guilt, urgency, and emotional enmeshment.
-3. Draft a concise, natural reply in ${outLanguage === "ru" ? "Russian" : "English"} tailored to this exact message using the "${boundaryStance}" boundary stance:
-   - "gray": minimal, neutral, non-reactive, zero emotional fuel.
-   - "medium": calm, polite, warm enough without over-attuning; holds adult independence and refuses projected relational scripts or guilt transfer.
-   - "firm": clear adult boundary and timeline; protects independence and separates the parent's relationship projections from your own life; zero JADE (Justify, Argue, Defend, Explain).
+1. Identify up to 3 specific dynamics in "hooks" written in ${uiLanguage === "ru" ? "Russian" : "English"}.
+2. Extract the literal core fact in 1 short sentence in ${uiLanguage === "ru" ? "Russian" : "English"}, stripping away projections, guilt, urgency, and emotional hooks.`;
 
+      if (mode === "advice") {
+        return `${sharedContext}
+3. In "reply", write a thoughtful, grounded response in ${outLanguage === "ru" ? "Russian" : "English"} for the user (the person who received/typed the message) that combines:
+   - Subjectivity: validate what emotional weight, tension, or pull this message can naturally trigger for the person receiving it.
+   - View from above: step back to an elevated, calm observer view of the whole pattern—including how enmeshment and codependency operate as a two-way street (both rescuing/managing and pulling/guilting), independence from a parent, and separating the parent's projected relationships with loved ones from the user's own life.
+   - Boundary advice: practical, concrete guidance aligned with the "${boundaryStance}" boundary stance and zero JADE (Justify, Argue, Defend, Explain).
+Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
+      }
+
+      return `${sharedContext}
+3. In "reply", draft a concise, natural message directly to the mother in ${outLanguage === "ru" ? "Russian" : "English"} using the "${boundaryStance}" boundary stance:
+   - Do NOT over-control, lecture, diagnose, or manage her behavior/emotions.
+   - Recognize that enmeshment and codependency are a two-way street: stay grounded in your own autonomy without either over-accommodating or trying to control her reactions.
+   - Separate her relationship projections and emotional hooks from your own independence, with zero JADE (Justify, Argue, Defend, Explain).
+   - "gray": minimal, neutral, non-reactive, zero emotional fuel.
+   - "medium": calm, warm enough, grounded in independence, refuses guilt or projected scripts without lecturing.
+   - "firm": clear boundary and timeline with calm self-possession and zero over-control or JADE.
 Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
     }
 
@@ -364,10 +411,12 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
       document.getElementById("optGray").textContent = t.optGray;
       document.getElementById("optFirm").textContent = t.optFirm;
       document.getElementById("lblReplyLang").textContent = t.replyLang;
-      document.getElementById("btnGenerate").textContent = t.btnGenerate;
+      document.getElementById("btnReplyMother").textContent = t.btnReplyMother;
+      document.getElementById("btnAdviceView").textContent = t.btnAdviceView;
       document.getElementById("lblHooks").textContent = t.hooks;
       document.getElementById("lblFact").textContent = t.fact;
-      document.getElementById("lblReply").textContent = t.reply;
+      document.getElementById("lblReply").textContent = lastMode === "advice" ? t.replyAdvice : t.replyMother;
+      document.getElementById("modeBadge").textContent = lastMode === "advice" ? t.badgeAdvice : t.badgeMother;
       document.getElementById("btnCopy").textContent = t.btnCopy;
       document.getElementById("btnSpeak").textContent = isSpeaking ? t.btnStopSpeak : t.btnSpeak;
       document.getElementById("btnSave").textContent = t.btnSave;
@@ -593,165 +642,4 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
         return;
       }
 
-      const text = document.getElementById("replyText").textContent.trim();
-      if (!text) return;
-
-      window.speechSynthesis.cancel();
-
-      const langCode = detectLanguage(text) === "ru" ? "ru-RU" : "en-US";
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = langCode;
-
-      const voices = window.speechSynthesis.getVoices();
-      const matchedVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(langCode.slice(0, 2)));
-      if (matchedVoice) {
-        utterance.voice = matchedVoice;
-      }
-
-      const btn = document.getElementById("btnSpeak");
-      utterance.onstart = () => {
-        isSpeaking = true;
-        btn.classList.add("mic-active");
-        btn.textContent = UI_TEXT[uiLang].btnStopSpeak;
-      };
-      utterance.onend = stopSpeaking;
-      utterance.onerror = stopSpeaking;
-
-      window.speechSynthesis.speak(utterance);
-    }
-
-    function parseModelOutput(rawText) {
-      const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-      try {
-        return JSON.parse(cleaned);
-      } catch {
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (match) {
-          return JSON.parse(match[0]);
-        }
-        return { hooks: ["Groq Response"], fact: "", reply: cleaned };
-      }
-    }
-
-    async function analyzeWithGroq() {
-      if (isRecording && recognition) {
-        recognition.stop();
-      }
-      const incoming = document.getElementById("incoming").value.trim();
-      if (!incoming) return;
-
-      stopSpeaking();
-
-      const apiKey = document.getElementById("apiKey").value.trim();
-      let model = document.getElementById("modelName").value.trim();
-      if (!model || model === "llama-3.1-8b-instant") {
-        model = DEFAULT_GROQ_MODEL;
-        document.getElementById("modelName").value = model;
-        saveSettings();
-      }
-
-      const stance = document.getElementById("stance").value;
-      const selectedLang = document.getElementById("lang").value;
-      localStorage.setItem("ber_replylang", selectedLang);
-
-      const outLang = selectedLang === "auto" ? detectLanguage(incoming) : selectedLang;
-
-      document.getElementById("outputCard").style.display = "block";
-      document.getElementById("hooksList").innerHTML = "";
-      document.getElementById("coreFact").textContent = "";
-      document.getElementById("replyText").className = "reply-box";
-
-      if (!apiKey) {
-        document.getElementById("replyText").className = "reply-box error-text";
-        document.getElementById("replyText").textContent = UI_TEXT[uiLang].missingKey;
-        document.getElementById("settingsPanel").style.display = "block";
-        return;
-      }
-
-      document.getElementById("replyText").textContent = uiLang === "ru" ? "Groq анализирует сообщение..." : "Groq analyzing message...";
-
-      const systemPrompt = buildSystemPrompt(uiLang, outLang, stance);
-
-      try {
-        const r = await fetch(GROQ_CHAT_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: incoming }
-            ],
-            response_format: { type: "json_object" }
-          })
-        });
-
-        if (!r.ok) {
-          const errBody = await r.text();
-          throw new Error(`GROQ API ${r.status}: ${errBody}`);
-        }
-
-        const data = await r.json();
-        const raw = data.choices?.[0]?.message?.content || "{}";
-        const parsed = parseModelOutput(raw);
-
-        const hooksArr = Array.isArray(parsed.hooks) && parsed.hooks.length > 0 ? parsed.hooks : ["Groq Analysis"];
-        document.getElementById("hooksList").innerHTML = hooksArr.map(h => `<span class="tag">${h}</span>`).join("");
-        document.getElementById("coreFact").textContent = parsed.fact || "";
-        document.getElementById("replyText").textContent = parsed.reply || "";
-      } catch (err) {
-        document.getElementById("replyText").className = "reply-box error-text";
-        document.getElementById("replyText").textContent = err.message || String(err);
-      }
-    }
-
-    function showStatus(msg) {
-      const el = document.getElementById("copyStatus");
-      el.textContent = msg;
-      setTimeout(() => { el.textContent = ""; }, 2000);
-    }
-
-    function copyReply() {
-      const text = document.getElementById("replyText").textContent;
-      navigator.clipboard.writeText(text);
-      showStatus(UI_TEXT[uiLang].copied);
-    }
-
-    function saveToLog() {
-      const logs = JSON.parse(localStorage.getItem("ber_logs") || "[]");
-      logs.unshift({
-        date: new Date().toLocaleString(),
-        incoming: document.getElementById("incoming").value.trim(),
-        reply: document.getElementById("replyText").textContent
-      });
-      localStorage.setItem("ber_logs", JSON.stringify(logs.slice(0, 25)));
-      renderLog();
-      showStatus(UI_TEXT[uiLang].saved);
-    }
-
-    function renderLog() {
-      const logs = JSON.parse(localStorage.getItem("ber_logs") || "[]");
-      const container = document.getElementById("logContainer");
-      if (logs.length === 0) {
-        container.innerHTML = `<div style="color:var(--muted); font-size:0.85rem;">${UI_TEXT[uiLang].emptyLog}</div>`;
-        return;
-      }
-      container.innerHTML = logs.map(item => `
-        <div class="log-item">
-          <div style="color:var(--muted); font-size:0.75rem;">${item.date}</div>
-          <div><strong>In:</strong> ${item.incoming}</div>
-          <div style="color:var(--ok); margin-top:4px;"><strong>Out:</strong> ${item.reply}</div>
-        </div>
-      `).join("");
-    }
-
-    function clearLog() {
-      localStorage.removeItem("ber_logs");
-      renderLog();
-    }
-  </script>
-</body>
-</html>
+      const text = document.getElementById("replyText").textContent
