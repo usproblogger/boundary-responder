@@ -120,6 +120,16 @@
       white-space: pre-wrap;
       font-size: 0.95rem;
     }
+    .wtf-box {
+      background: #0f172a;
+      border-left: 3px solid var(--warn);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      white-space: pre-wrap;
+      font-size: 0.92rem;
+      color: #fde68a;
+    }
     .summary-box {
       background: #0f172a;
       border-left: 3px solid var(--accent);
@@ -224,15 +234,21 @@
     <label id="lblFact">Сухой факт (без проекций и давления)</label>
     <div id="coreFact" style="font-size:0.9rem; color:#cbd5e1; margin-bottom:12px;"></div>
 
-    <label id="lblReply">Готовый ответ с удержанием автономии</label>
+    <label id="lblReply">Готовый добрый ответ маме (копировать и отправить)</label>
     <div id="replyText" class="reply-box"></div>
 
     <div class="actions">
       <button id="btnCopy" onclick="copyReply()">Скопировать ответ</button>
+      <button class="secondary" id="btnWtf" onclick="explainWtf()">Что за хрень? / WTF Is Going On?</button>
       <button class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Озвучить / Speak</button>
       <button class="secondary" id="btnSummary" onclick="summarizeOutput()">Сжать (1–2 предл.) / Summary</button>
       <button class="secondary" id="btnSave" onclick="saveToLog()">Сохранить в журнал</button>
       <span id="copyStatus" class="status-toast"></span>
+    </div>
+
+    <div id="wtfWrap" style="display:none;">
+      <label id="lblWtfOut" style="margin-top:12px;">Прямой разбор для себя (без фильтра)</label>
+      <div id="wtfText" class="wtf-box"></div>
     </div>
 
     <div id="summaryWrap" style="display:none;">
@@ -288,8 +304,11 @@
         btnGenerate: "Разобрать через Groq и создать ответ",
         hooks: "Обнаруженные крючки и проекции",
         fact: "Сухой факт (без проекций и давления)",
-        reply: "Готовый ответ с удержанием автономии",
+        reply: "Готовый добрый ответ маме (копировать и отправить)",
         btnCopy: "Скопировать ответ",
+        btnWtf: "Что за хрень? / WTF Is Going On?",
+        wtfOut: "Прямой разбор для себя (без фильтра)",
+        wtfLoading: "Разбираю, что тут реально происходит...",
         btnSpeak: "Озвучить / Speak",
         btnStopSpeak: "Стоп / Stop",
         ttsUnsupported: "Озвучивание не поддерживается в этом браузере.",
@@ -331,8 +350,11 @@
         btnGenerate: "Analyze with Groq & Draft Reply",
         hooks: "Detected Enmeshment, Projections & Hooks",
         fact: "Literal Core Fact (Without Projections or Pressure)",
-        reply: "Suggested Autonomy-Preserving Reply",
+        reply: "Kind Reply for Mom (Copy & Paste)",
         btnCopy: "Copy Reply",
+        btnWtf: "WTF Is Going On?",
+        wtfOut: "Straight Self-Talk / Reality Check (Unfiltered)",
+        wtfLoading: "Checking what's actually going on...",
         btnSpeak: "Speak Reply",
         btnStopSpeak: "Stop Speaking",
         ttsUnsupported: "Text-to-speech is not supported in this browser.",
@@ -359,10 +381,10 @@ Pay special attention to:
 Analyze the incoming message (which may be in Russian or English).
 1. Identify up to 3 specific dynamics in "hooks" written in ${uiLanguage === "ru" ? "Russian" : "English"} (such as relationship projection, parent-child enmeshment, guilt/codependency hook, autonomy pushback, or triangulation).
 2. Extract the literal core fact in 1 short sentence in ${uiLanguage === "ru" ? "Russian" : "English"}, stripping away relationship projections, guilt, urgency, and emotional enmeshment.
-3. Draft a concise, natural reply in ${outLanguage === "ru" ? "Russian" : "English"} tailored to this exact message using the "${boundaryStance}" boundary stance:
-   - "gray": minimal, neutral, non-reactive, zero emotional fuel.
-   - "medium": calm, polite, warm enough without over-attuning; holds adult independence and refuses projected relational scripts or guilt transfer.
-   - "firm": clear adult boundary and timeline; protects independence and separates the parent's relationship projections from your own life; zero JADE (Justify, Argue, Defend, Explain).
+3. Draft a kind, polite, natural reply in ${outLanguage === "ru" ? "Russian" : "English"} to send to the parent using the "${boundaryStance}" stance:
+   - Never use the word "boundary" / "boundaries" / "границы" and never lecture, correct, or try to control the parent.
+   - Be warm/kind on the surface while firmly keeping your own adult independence, separate life, and refusal to take on projected relationship drama or emotional caretaking.
+   - Keep it free of JADE (Justify, Argue, Defend, Explain).
 
 Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
     }
@@ -398,6 +420,8 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
       document.getElementById("lblFact").textContent = t.fact;
       document.getElementById("lblReply").textContent = t.reply;
       document.getElementById("btnCopy").textContent = t.btnCopy;
+      document.getElementById("btnWtf").textContent = t.btnWtf;
+      document.getElementById("lblWtfOut").textContent = t.wtfOut;
       document.getElementById("btnSpeak").textContent = isSpeaking ? t.btnStopSpeak : t.btnSpeak;
       document.getElementById("btnSummary").textContent = t.btnSummary;
       document.getElementById("lblSummaryOut").textContent = t.summaryOut;
@@ -626,9 +650,13 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
 
       const summaryVisible = document.getElementById("summaryWrap").style.display !== "none";
       const summaryVal = document.getElementById("summaryText").textContent.trim();
+      const wtfVisible = document.getElementById("wtfWrap").style.display !== "none";
+      const wtfVal = document.getElementById("wtfText").textContent.trim();
       const text = (summaryVisible && summaryVal)
         ? summaryVal
-        : document.getElementById("replyText").textContent.trim();
+        : (wtfVisible && wtfVal)
+          ? wtfVal
+          : document.getElementById("replyText").textContent.trim();
       if (!text) return;
 
       window.speechSynthesis.cancel();
@@ -653,6 +681,70 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
       utterance.onerror = stopSpeaking;
 
       window.speechSynthesis.speak(utterance);
+    }
+
+    async function explainWtf() {
+      const apiKey = document.getElementById("apiKey").value.trim();
+      let model = document.getElementById("modelName").value.trim();
+      if (!model || model === "llama-3.1-8b-instant") {
+        model = DEFAULT_GROQ_MODEL;
+        document.getElementById("modelName").value = model;
+        saveSettings();
+      }
+
+      const incoming = document.getElementById("incoming").value.trim();
+      const hooks = document.getElementById("hooksList").textContent.trim();
+      const fact = document.getElementById("coreFact").textContent.trim();
+      if (!incoming && !fact) return;
+
+      const wrap = document.getElementById("wtfWrap");
+      const box = document.getElementById("wtfText");
+      wrap.style.display = "block";
+      box.className = "wtf-box";
+
+      if (!apiKey) {
+        box.className = "wtf-box error-text";
+        box.textContent = UI_TEXT[uiLang].missingKey;
+        document.getElementById("settingsPanel").style.display = "block";
+        return;
+      }
+
+      box.textContent = UI_TEXT[uiLang].wtfLoading;
+      const targetLang = uiLang === "ru" ? "Russian" : "English";
+
+      try {
+        const r = await fetch(GROQ_CHAT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              {
+                role: "system",
+                content: `You are talking directly to the adult child as straight, unfiltered self-talk in ${targetLang}. Tell them bluntly in 2-3 punchy sentences what is actually going on: if the parent is just being noisy, doing monkey business, projecting their own relationships/drama, or fishing for emotional reaction, call it out plainly and tell them to ignore the trick and stay in their own lane.`
+              },
+              {
+                role: "user",
+                content: `Message: ${incoming}\nHooks: ${hooks}\nFact: ${fact}`
+              }
+            ]
+          })
+        });
+
+        if (!r.ok) {
+          const errBody = await r.text();
+          throw new Error(`GROQ API ${r.status}: ${errBody}`);
+        }
+
+        const data = await r.json();
+        box.textContent = (data.choices?.[0]?.message?.content || "").trim();
+      } catch (err) {
+        box.className = "wtf-box error-text";
+        box.textContent = err.message || String(err);
+      }
     }
 
     async function summarizeOutput() {
@@ -738,6 +830,8 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
       if (!incoming) return;
 
       stopSpeaking();
+      document.getElementById("wtfWrap").style.display = "none";
+      document.getElementById("wtfText").textContent = "";
       document.getElementById("summaryWrap").style.display = "none";
       document.getElementById("summaryText").textContent = "";
 
