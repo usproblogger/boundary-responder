@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boundary & Enmeshment Responder</title>
+  <title>Boundary &amp; Enmeshment Responder</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -140,6 +140,7 @@
       font-size: 0.85rem;
     }
     .status-toast { font-size: 0.85rem; color: var(--ok); margin-left: 4px; }
+    .interim-preview { font-style: italic; color: var(--accent); font-size: 0.88rem; }
     .error-text { color: #f87171; font-size: 0.9rem; }
   </style>
 </head>
@@ -241,6 +242,7 @@
     let recognition = null;
     let isRecording = false;
     let isSpeaking = false;
+    let baseTranscript = "";
 
     const UI_TEXT = {
       ru: {
@@ -465,8 +467,10 @@
       const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
       const statusEl = document.getElementById("micStatus");
       const btnMic = document.getElementById("btnMic");
+      const ta = document.getElementById("incoming");
 
       if (!SpeechRec) {
+        statusEl.className = "error-text";
         statusEl.textContent = UI_TEXT[uiLang].micUnsupported;
         return;
       }
@@ -486,35 +490,61 @@
         recognition.lang = uiLang === "ru" ? "ru-RU" : "en-US";
       }
 
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.maxAlternatives = 1;
+      baseTranscript = ta.value.trim();
 
       recognition.onstart = () => {
         isRecording = true;
+        statusEl.className = "status-toast";
         btnMic.classList.add("mic-active");
         btnMic.textContent = UI_TEXT[uiLang].micStop;
         statusEl.textContent = UI_TEXT[uiLang].micListening;
       };
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        const ta = document.getElementById("incoming");
-        ta.value = ta.value ? `${ta.value.trim()} ${transcript}` : transcript;
+        let sessionFinal = "";
+        let interim = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const piece = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            sessionFinal += piece;
+          } else {
+            interim += piece;
+          }
+        }
+
+        if (sessionFinal) {
+          baseTranscript = baseTranscript
+            ? `${baseTranscript.trim()} ${sessionFinal.trim()}`
+            : sessionFinal.trim();
+        }
+
+        ta.value = baseTranscript;
+
+        if (interim.trim()) {
+          statusEl.className = "interim-preview";
+          statusEl.textContent = `... ${interim.trim()}`;
+        } else {
+          statusEl.className = "status-toast";
+          statusEl.textContent = UI_TEXT[uiLang].micListening;
+        }
       };
 
       recognition.onerror = () => {
+        statusEl.className = "error-text";
         statusEl.textContent = UI_TEXT[uiLang].micDenied;
       };
 
       recognition.onend = () => {
         isRecording = false;
+        ta.value = baseTranscript.trim();
         btnMic.classList.remove("mic-active");
         btnMic.textContent = UI_TEXT[uiLang].micStart;
-        setTimeout(() => {
-          if (!isRecording && statusEl.textContent === UI_TEXT[uiLang].micListening) {
-            statusEl.textContent = "";
-          }
-        }, 1500);
+        statusEl.className = "status-toast";
+        statusEl.textContent = "";
       };
 
       recognition.start();
@@ -586,6 +616,9 @@
     }
 
     async function analyzeWithGroq() {
+      if (isRecording && recognition) {
+        recognition.stop();
+      }
       const incoming = document.getElementById("incoming").value.trim();
       if (!incoming) return;
 
