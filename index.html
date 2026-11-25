@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boundary & Enmeshment Responder</title>
+  <title>Boundary &amp; Enmeshment Responder</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -225,6 +225,22 @@
     </div>
 
     <button id="btnGenerate" onclick="analyzeWithGroq()" style="width:100%;">Разобрать через Groq и создать ответ</button>
+
+    <div class="actions">
+      <button type="button" class="secondary" id="btnWtf" onclick="explainWtf()">Что за хрень? / WTF Is Going On?</button>
+      <button type="button" class="secondary" id="btnSummary" onclick="summarizeOutput()">Сжать (1–2 предл.) / Summary</button>
+      <button type="button" class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Озвучить / Speak</button>
+    </div>
+
+    <div id="wtfWrap" style="display:none;">
+      <label id="lblWtfOut" style="margin-top:12px;">Прямой разбор для себя (без фильтра)</label>
+      <div id="wtfText" class="wtf-box"></div>
+    </div>
+
+    <div id="summaryWrap" style="display:none;">
+      <label id="lblSummaryOut" style="margin-top:12px;">Короткий вывод (макс. 1–2 предложения)</label>
+      <div id="summaryText" class="summary-box"></div>
+    </div>
   </div>
 
   <div id="outputCard" class="card" style="display:none;">
@@ -239,21 +255,8 @@
 
     <div class="actions">
       <button id="btnCopy" onclick="copyReply()">Скопировать ответ</button>
-      <button class="secondary" id="btnWtf" onclick="explainWtf()">Что за хрень? / WTF Is Going On?</button>
-      <button class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Озвучить / Speak</button>
-      <button class="secondary" id="btnSummary" onclick="summarizeOutput()">Сжать (1–2 предл.) / Summary</button>
       <button class="secondary" id="btnSave" onclick="saveToLog()">Сохранить в журнал</button>
       <span id="copyStatus" class="status-toast"></span>
-    </div>
-
-    <div id="wtfWrap" style="display:none;">
-      <label id="lblWtfOut" style="margin-top:12px;">Прямой разбор для себя (без фильтра)</label>
-      <div id="wtfText" class="wtf-box"></div>
-    </div>
-
-    <div id="summaryWrap" style="display:none;">
-      <label id="lblSummaryOut" style="margin-top:12px;">Короткий вывод (макс. 1–2 предложения)</label>
-      <div id="summaryText" class="summary-box"></div>
     </div>
   </div>
 
@@ -321,7 +324,8 @@
         copied: "Скопировано!",
         saved: "Сохранено!",
         emptyLog: "Записей пока нет.",
-        missingKey: "Укажите Groq API ключ в настройках перед запуском."
+        missingKey: "Укажите Groq API ключ в настройках перед запуском.",
+        missingInput: "Сначала вставьте или продиктуйте текст сообщения."
       },
       en: {
         title: "Boundary & Enmeshment Responder",
@@ -367,7 +371,8 @@
         copied: "Copied!",
         saved: "Saved!",
         emptyLog: "No saved entries yet.",
-        missingKey: "Enter a Groq API key in Groq API settings before generating."
+        missingKey: "Enter a Groq API key in Groq API settings before generating.",
+        missingInput: "Paste or dictate a message first."
       }
     };
 
@@ -684,6 +689,25 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
     }
 
     async function explainWtf() {
+      if (isRecording && recognition) {
+        recognition.stop();
+      }
+
+      const incoming = document.getElementById("incoming").value.trim();
+      const hooks = document.getElementById("hooksList").textContent.trim();
+      const fact = document.getElementById("coreFact").textContent.trim();
+
+      const wrap = document.getElementById("wtfWrap");
+      const box = document.getElementById("wtfText");
+      wrap.style.display = "block";
+      box.className = "wtf-box";
+
+      if (!incoming && !fact) {
+        box.className = "wtf-box error-text";
+        box.textContent = UI_TEXT[uiLang].missingInput;
+        return;
+      }
+
       const apiKey = document.getElementById("apiKey").value.trim();
       let model = document.getElementById("modelName").value.trim();
       if (!model || model === "llama-3.1-8b-instant") {
@@ -691,16 +715,6 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
         document.getElementById("modelName").value = model;
         saveSettings();
       }
-
-      const incoming = document.getElementById("incoming").value.trim();
-      const hooks = document.getElementById("hooksList").textContent.trim();
-      const fact = document.getElementById("coreFact").textContent.trim();
-      if (!incoming && !fact) return;
-
-      const wrap = document.getElementById("wtfWrap");
-      const box = document.getElementById("wtfText");
-      wrap.style.display = "block";
-      box.className = "wtf-box";
 
       if (!apiKey) {
         box.className = "wtf-box error-text";
@@ -748,6 +762,26 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
     }
 
     async function summarizeOutput() {
+      if (isRecording && recognition) {
+        recognition.stop();
+      }
+
+      const incoming = document.getElementById("incoming").value.trim();
+      const fact = document.getElementById("coreFact").textContent.trim();
+      const reply = document.getElementById("replyText").textContent.trim();
+      const sourceText = [fact, reply, incoming].filter(Boolean).join("\n");
+
+      const wrap = document.getElementById("summaryWrap");
+      const box = document.getElementById("summaryText");
+      wrap.style.display = "block";
+      box.className = "summary-box";
+
+      if (!sourceText) {
+        box.className = "summary-box error-text";
+        box.textContent = UI_TEXT[uiLang].missingInput;
+        return;
+      }
+
       const apiKey = document.getElementById("apiKey").value.trim();
       let model = document.getElementById("modelName").value.trim();
       if (!model || model === "llama-3.1-8b-instant") {
@@ -755,16 +789,6 @@ Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..
         document.getElementById("modelName").value = model;
         saveSettings();
       }
-
-      const fact = document.getElementById("coreFact").textContent.trim();
-      const reply = document.getElementById("replyText").textContent.trim();
-      const sourceText = [fact, reply].filter(Boolean).join("\n");
-      if (!sourceText) return;
-
-      const wrap = document.getElementById("summaryWrap");
-      const box = document.getElementById("summaryText");
-      wrap.style.display = "block";
-      box.className = "summary-box";
 
       if (!apiKey) {
         box.className = "summary-box error-text";
