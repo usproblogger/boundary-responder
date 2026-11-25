@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boundary &amp; Enmeshment Responder</title>
+  <title>Boundary & Enmeshment Responder</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -218,6 +218,7 @@
 
     <div class="actions">
       <button id="btnCopy" onclick="copyReply()">Скопировать ответ</button>
+      <button class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Озвучить / Speak</button>
       <button class="secondary" id="btnSave" onclick="saveToLog()">Сохранить в журнал</button>
       <span id="copyStatus" class="status-toast"></span>
     </div>
@@ -239,6 +240,7 @@
     let uiLang = localStorage.getItem("ber_uilang") || "ru";
     let recognition = null;
     let isRecording = false;
+    let isSpeaking = false;
 
     const UI_TEXT = {
       ru: {
@@ -270,6 +272,9 @@
         fact: "Сухой факт (без эмоционального давления)",
         reply: "Готовый ответ с удержанием границ",
         btnCopy: "Скопировать ответ",
+        btnSpeak: "Озвучить / Speak",
+        btnStopSpeak: "Стоп / Stop",
+        ttsUnsupported: "Озвучивание не поддерживается в этом браузере.",
         btnSave: "Сохранить в журнал",
         logSummary: "Личный журнал границ (хранится локально в браузере)",
         btnClearLog: "Очистить журнал",
@@ -307,6 +312,9 @@
         fact: "Literal Core Fact (Without Emotional Subtext)",
         reply: "Suggested Boundary-Safe Reply",
         btnCopy: "Copy Reply",
+        btnSpeak: "Speak Reply",
+        btnStopSpeak: "Stop Speaking",
+        ttsUnsupported: "Text-to-speech is not supported in this browser.",
         btnSave: "Save to Private Log",
         logSummary: "Private Boundary Log (Stored Locally)",
         btnClearLog: "Clear Log",
@@ -341,6 +349,7 @@
       document.getElementById("lblFact").textContent = t.fact;
       document.getElementById("lblReply").textContent = t.reply;
       document.getElementById("btnCopy").textContent = t.btnCopy;
+      document.getElementById("btnSpeak").textContent = isSpeaking ? t.btnStopSpeak : t.btnSpeak;
       document.getElementById("btnSave").textContent = t.btnSave;
       document.getElementById("lblLogSummary").textContent = t.logSummary;
       document.getElementById("btnClearLog").textContent = t.btnClearLog;
@@ -362,6 +371,9 @@
       localStorage.setItem("ber_model", document.getElementById("modelName").value);
       document.getElementById("lang").value = localStorage.getItem("ber_replylang") || "auto";
       applyUiLang();
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.getVoices();
+      }
     };
 
     function toggleSettings() {
@@ -512,6 +524,54 @@
       return /[а-яА-ЯёЁ]/.test(text) ? "ru" : "en";
     }
 
+    function stopSpeaking() {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      isSpeaking = false;
+      const btn = document.getElementById("btnSpeak");
+      btn.classList.remove("mic-active");
+      btn.textContent = UI_TEXT[uiLang].btnSpeak;
+    }
+
+    function toggleSpeakReply() {
+      if (!("speechSynthesis" in window)) {
+        showStatus(UI_TEXT[uiLang].ttsUnsupported);
+        return;
+      }
+
+      if (isSpeaking) {
+        stopSpeaking();
+        return;
+      }
+
+      const text = document.getElementById("replyText").textContent.trim();
+      if (!text) return;
+
+      window.speechSynthesis.cancel();
+
+      const langCode = detectLanguage(text) === "ru" ? "ru-RU" : "en-US";
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = langCode;
+
+      const voices = window.speechSynthesis.getVoices();
+      const matchedVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(langCode.slice(0, 2)));
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
+
+      const btn = document.getElementById("btnSpeak");
+      utterance.onstart = () => {
+        isSpeaking = true;
+        btn.classList.add("mic-active");
+        btn.textContent = UI_TEXT[uiLang].btnStopSpeak;
+      };
+      utterance.onend = stopSpeaking;
+      utterance.onerror = stopSpeaking;
+
+      window.speechSynthesis.speak(utterance);
+    }
+
     function parseModelOutput(rawText) {
       const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
       try {
@@ -528,6 +588,8 @@
     async function analyzeWithGroq() {
       const incoming = document.getElementById("incoming").value.trim();
       if (!incoming) return;
+
+      stopSpeaking();
 
       const apiKey = document.getElementById("apiKey").value.trim();
       let model = document.getElementById("modelName").value.trim();
