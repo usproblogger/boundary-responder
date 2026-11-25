@@ -1,1 +1,747 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boundary &amp; Enmeshment Responder</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --warn: #f59e0b;
+      --ok: #10b981;
+      --rec: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    h1 { font-size: 1.2rem; font-weight: 700; }
+    .subtitle { font-size: 0.85rem; color: var(--muted); }
+    .header-controls { display: flex; gap: 8px; align-items: center; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+    .label-row label { margin-bottom: 0; }
+    textarea, input, select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 540px) { .row { grid-template-columns: 1fr; } }
+    button {
+      background: var(--accent);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-hover); color: #fff; }
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 600;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+    button.secondary:hover { background: #334155; }
+    button.mic-active {
+      background: var(--rec);
+      border-color: var(--rec);
+      color: #fff;
+    }
+    .tag {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warn);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      margin: 0 6px 6px 0;
+    }
+    .reply-box {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 8px;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+    }
+    .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+    .grounding {
+      border-left: 3px solid var(--ok);
+      padding-left: 12px;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+    details summary {
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .log-item {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+    }
+    .status-toast { font-size: 0.85rem; color: var(--ok); margin-left: 4px; }
+    .interim-preview { font-style: italic; color: var(--accent); font-size: 0.88rem; }
+    .error-text { color: #f87171; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1 id="uiTitle">Контроль границ / Boundary Responder</h1>
+      <div id="uiSubtitle" class="subtitle">Groq AI · Удержание границ · Без JADE</div>
+    </div>
+    <div class="header-controls">
+      <button class="secondary" id="uiLangBtn" onclick="toggleUiLang()">EN / RU</button>
+      <button class="secondary" id="uiSettingsBtn" onclick="toggleSettings()">Groq API</button>
+    </div>
+  </header>
 
+  <div id="settingsPanel" class="card" style="display:none;">
+    <label id="lblApiKey">Groq API Ключ (сохраняется только в вашем браузере)</label>
+    <input type="password" id="apiKey" placeholder="gsk_..." onchange="saveSettings()" />
+    <div class="label-row">
+      <label id="lblModel" for="modelName">Модель Groq (Model ID)</label>
+      <button type="button" class="secondary" id="btnFetchGroq" onclick="fetchGroqModels()">Загрузить модели / Fetch Models</button>
+    </div>
+    <input type="text" id="modelName" placeholder="openai/gpt-oss-20b" onchange="saveSettings()" />
+    <div id="groqModelsWrap" style="display:none;">
+      <label id="lblGroqList" for="groqModelSelect">Активные модели Groq</label>
+      <select id="groqModelSelect" onchange="applySelectedGroqModel()"></select>
+    </div>
+    <div id="apiStatus" class="status-toast" style="margin-bottom:6px;"></div>
+  </div>
+
+  <div class="card">
+    <div id="uiGrounding" class="grounding">
+      <strong>Позиция Взрослого:</strong> Вы не обязаны обслуживать чужую тревогу, скуку или одиночество. Не используйте <strong>JADE</strong>: не оправдывайтесь, не спорьте, не защищайтесь и не объясняйте лишнего.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label-row">
+      <label id="lblIncoming" for="incoming">1. Вставьте или продиктуйте сообщение (RU / EN)</label>
+      <button type="button" class="secondary" id="btnMic" onclick="toggleMic()">Микрофон / Mic</button>
+    </div>
+    <textarea id="incoming" placeholder="Вставьте сообщение или нажмите «Микрофон / Mic»..."></textarea>
+    <div id="micStatus" class="status-toast" style="margin-bottom:10px;"></div>
+
+    <div class="row">
+      <div>
+        <label id="lblStance" for="stance">2. Стиль границ</label>
+        <select id="stance">
+          <option value="medium" id="optMedium">Medium Chill (Спокойно, тепло, без вовлечения)</option>
+          <option value="gray" id="optGray">Gray Rock (Серый камень: сухо и по факту)</option>
+          <option value="firm" id="optFirm">Firm Limit (Жёсткая граница и рамка времени)</option>
+        </select>
+      </div>
+      <div>
+        <label id="lblReplyLang" for="lang">3. Язык ответа (Output Language)</label>
+        <select id="lang">
+          <option value="auto">Авто (как во входящем / Auto-detect)</option>
+          <option value="ru">Русский (Russian)</option>
+          <option value="en">English (Английский)</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="btnGenerate" onclick="analyzeWithGroq()" style="width:100%;">Разобрать через Groq и создать ответ</button>
+  </div>
+
+  <div id="outputCard" class="card" style="display:none;">
+    <label id="lblHooks">Обнаруженные крючки</label>
+    <div id="hooksList" style="margin-bottom:12px;"></div>
+
+    <label id="lblFact">Сухой факт (без эмоционального давления)</label>
+    <div id="coreFact" style="font-size:0.9rem; color:#cbd5e1; margin-bottom:12px;"></div>
+
+    <label id="lblReply">Готовый ответ с удержанием границ</label>
+    <div id="replyText" class="reply-box"></div>
+
+    <div class="actions">
+      <button id="btnCopy" onclick="copyReply()">Скопировать ответ</button>
+      <button class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Озвучить / Speak</button>
+      <button class="secondary" id="btnSave" onclick="saveToLog()">Сохранить в журнал</button>
+      <span id="copyStatus" class="status-toast"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary id="lblLogSummary">Личный журнал границ (хранится локально в браузере)</summary>
+      <div id="logContainer" style="margin-top:10px;"></div>
+      <button class="secondary" id="btnClearLog" onclick="clearLog()" style="margin-top:12px; font-size:0.8rem;">Очистить журнал</button>
+    </details>
+  </div>
+
+  <script>
+    const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
+    const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
+    const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
+
+    let uiLang = localStorage.getItem("ber_uilang") || "ru";
+    let recognition = null;
+    let isRecording = false;
+    let isSpeaking = false;
+    let baseTranscript = "";
+
+    const UI_TEXT = {
+      ru: {
+        title: "Контроль границ / Boundary Responder",
+        subtitle: "Groq AI · Удержание границ · Без JADE",
+        settingsBtn: "Groq API",
+        apiKey: "Groq API Ключ (сохраняется только в вашем браузере)",
+        model: "Модель Groq (Model ID)",
+        fetchGroq: "Загрузить модели / Fetch Models",
+        groqList: "Активные модели Groq",
+        fetchingGroq: "Загрузка моделей Groq...",
+        groqLoaded: "Загружено моделей: ",
+        groqNone: "Активные модели не найдены.",
+        grounding: "<strong>Позиция Взрослого:</strong> Вы не обязаны обслуживать чужую тревогу, скуку или одиночество. Не используйте <strong>JADE</strong>: не оправдывайтесь, не спорьте, не защищайтесь и не объясняйте лишнего.",
+        incoming: "1. Вставьте или продиктуйте сообщение (RU / EN)",
+        placeholder: "Вставьте сообщение или нажмите «Микрофон / Mic»...",
+        micStart: "Микрофон / Mic",
+        micStop: "Стоп / Stop",
+        micListening: "Слушаю... говорите.",
+        micUnsupported: "Голосовой ввод не поддерживается в этом браузере.",
+        micDenied: "Доступ к микрофону запрещён или произошла ошибка.",
+        stance: "2. Стиль границ",
+        optMedium: "Medium Chill (Спокойно, тепло, без вовлечения)",
+        optGray: "Gray Rock (Серый камень: сухо и по факту)",
+        optFirm: "Firm Limit (Жёсткая граница и рамка времени)",
+        replyLang: "3. Язык ответа (Output Language)",
+        btnGenerate: "Разобрать через Groq и создать ответ",
+        hooks: "Обнаруженные крючки",
+        fact: "Сухой факт (без эмоционального давления)",
+        reply: "Готовый ответ с удержанием границ",
+        btnCopy: "Скопировать ответ",
+        btnSpeak: "Озвучить / Speak",
+        btnStopSpeak: "Стоп / Stop",
+        ttsUnsupported: "Озвучивание не поддерживается в этом браузере.",
+        btnSave: "Сохранить в журнал",
+        logSummary: "Личный журнал границ (хранится локально в браузере)",
+        btnClearLog: "Очистить журнал",
+        copied: "Скопировано!",
+        saved: "Сохранено!",
+        emptyLog: "Записей пока нет.",
+        missingKey: "Укажите Groq API ключ в настройках перед запуском."
+      },
+      en: {
+        title: "Boundary & Enmeshment Responder",
+        subtitle: "Groq AI · Hold your frame · No JADE",
+        settingsBtn: "Groq API",
+        apiKey: "Groq API Key (Stored locally in your browser)",
+        model: "Groq Model ID",
+        fetchGroq: "Fetch Models",
+        groqList: "Active Groq Models",
+        fetchingGroq: "Fetching Groq models...",
+        groqLoaded: "Loaded models: ",
+        groqNone: "No active models returned.",
+        grounding: "<strong>Adult Ego-State Check:</strong> You are not responsible for regulating another adult's boredom, loneliness, or anxiety. Do not <strong>J</strong>ustify, <strong>A</strong>rgue, <strong>D</strong>efend, or <strong>E</strong>xplain.",
+        incoming: "1. Paste or Dictate Incoming Message (RU / EN)",
+        placeholder: "Paste a message or press Mic to speak...",
+        micStart: "Mic / Speak",
+        micStop: "Stop Mic",
+        micListening: "Listening... speak now.",
+        micUnsupported: "Speech recognition is not supported in this browser.",
+        micDenied: "Microphone permission blocked or speech error occurred.",
+        stance: "2. Boundary Stance",
+        optMedium: "Medium Chill (Warm, calm, detached)",
+        optGray: "Gray Rock (Minimal, neutral, factual)",
+        optFirm: "Firm Limit (Clear boundary & timeline)",
+        replyLang: "3. Reply Language (Output Language)",
+        btnGenerate: "Analyze with Groq & Draft Reply",
+        hooks: "Detected Enmeshment / Manipulation Hooks",
+        fact: "Literal Core Fact (Without Emotional Subtext)",
+        reply: "Suggested Boundary-Safe Reply",
+        btnCopy: "Copy Reply",
+        btnSpeak: "Speak Reply",
+        btnStopSpeak: "Stop Speaking",
+        ttsUnsupported: "Text-to-speech is not supported in this browser.",
+        btnSave: "Save to Private Log",
+        logSummary: "Private Boundary Log (Stored Locally)",
+        btnClearLog: "Clear Log",
+        copied: "Copied!",
+        saved: "Saved!",
+        emptyLog: "No saved entries yet.",
+        missingKey: "Enter a Groq API key in Groq API settings before generating."
+      }
+    };
+
+    function applyUiLang() {
+      const t = UI_TEXT[uiLang];
+      document.documentElement.lang = uiLang;
+      document.getElementById("uiTitle").textContent = t.title;
+      document.getElementById("uiSubtitle").textContent = t.subtitle;
+      document.getElementById("uiSettingsBtn").textContent = t.settingsBtn;
+      document.getElementById("lblApiKey").textContent = t.apiKey;
+      document.getElementById("lblModel").textContent = t.model;
+      document.getElementById("btnFetchGroq").textContent = t.fetchGroq;
+      document.getElementById("lblGroqList").textContent = t.groqList;
+      document.getElementById("uiGrounding").innerHTML = t.grounding;
+      document.getElementById("lblIncoming").textContent = t.incoming;
+      document.getElementById("incoming").placeholder = t.placeholder;
+      document.getElementById("btnMic").textContent = isRecording ? t.micStop : t.micStart;
+      document.getElementById("lblStance").textContent = t.stance;
+      document.getElementById("optMedium").textContent = t.optMedium;
+      document.getElementById("optGray").textContent = t.optGray;
+      document.getElementById("optFirm").textContent = t.optFirm;
+      document.getElementById("lblReplyLang").textContent = t.replyLang;
+      document.getElementById("btnGenerate").textContent = t.btnGenerate;
+      document.getElementById("lblHooks").textContent = t.hooks;
+      document.getElementById("lblFact").textContent = t.fact;
+      document.getElementById("lblReply").textContent = t.reply;
+      document.getElementById("btnCopy").textContent = t.btnCopy;
+      document.getElementById("btnSpeak").textContent = isSpeaking ? t.btnStopSpeak : t.btnSpeak;
+      document.getElementById("btnSave").textContent = t.btnSave;
+      document.getElementById("lblLogSummary").textContent = t.logSummary;
+      document.getElementById("btnClearLog").textContent = t.btnClearLog;
+      renderLog();
+    }
+
+    function toggleUiLang() {
+      uiLang = uiLang === "ru" ? "en" : "ru";
+      localStorage.setItem("ber_uilang", uiLang);
+      applyUiLang();
+    }
+
+    window.onload = () => {
+      localStorage.setItem("ber_provider", "groq");
+      document.getElementById("apiKey").value = localStorage.getItem("ber_apikey") || "";
+      const savedModel = localStorage.getItem("ber_model");
+      document.getElementById("modelName").value =
+        savedModel && savedModel !== "llama-3.1-8b-instant" ? savedModel : DEFAULT_GROQ_MODEL;
+      localStorage.setItem("ber_model", document.getElementById("modelName").value);
+      document.getElementById("lang").value = localStorage.getItem("ber_replylang") || "auto";
+      applyUiLang();
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.getVoices();
+      }
+    };
+
+    function toggleSettings() {
+      const p = document.getElementById("settingsPanel");
+      p.style.display = p.style.display === "none" ? "block" : "none";
+    }
+
+    function saveSettings() {
+      localStorage.setItem("ber_provider", "groq");
+      localStorage.setItem("ber_apikey", document.getElementById("apiKey").value.trim());
+      localStorage.setItem("ber_model", document.getElementById("modelName").value.trim() || DEFAULT_GROQ_MODEL);
+    }
+
+    function applySelectedGroqModel() {
+      const sel = document.getElementById("groqModelSelect");
+      if (!sel.value) return;
+      document.getElementById("modelName").value = sel.value;
+      saveSettings();
+    }
+
+    function pickPreferredModel(list) {
+      const preferred = list.find(id => /gpt-oss|llama-3\.3|llama-4|qwen|gemma/i.test(id) && !/allam/i.test(id));
+      return preferred || list[0];
+    }
+
+    async function fetchGroqModels() {
+      const apiKey = document.getElementById("apiKey").value.trim();
+      const statusEl = document.getElementById("apiStatus");
+      const wrapEl = document.getElementById("groqModelsWrap");
+      const selectEl = document.getElementById("groqModelSelect");
+
+      statusEl.className = "status-toast";
+
+      if (!apiKey) {
+        statusEl.className = "error-text";
+        statusEl.textContent = UI_TEXT[uiLang].missingKey;
+        return;
+      }
+
+      saveSettings();
+      statusEl.textContent = UI_TEXT[uiLang].fetchingGroq;
+
+      try {
+        const res = await fetch(GROQ_MODELS_URL, {
+          headers: { "Authorization": `Bearer ${apiKey}` }
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Groq Models ${res.status}: ${errText}`);
+        }
+        const data = await res.json();
+        const allModels = Array.isArray(data.data) ? data.data : [];
+
+        const chatModels = allModels
+          .map(m => m.id)
+          .filter(id => id && !/whisper|guard|embedding|tts|distil-whisper/i.test(id));
+
+        const finalList = chatModels.length > 0 ? chatModels : allModels.map(m => m.id).filter(Boolean);
+
+        if (finalList.length === 0) {
+          statusEl.className = "error-text";
+          statusEl.textContent = UI_TEXT[uiLang].groqNone;
+          wrapEl.style.display = "none";
+          return;
+        }
+
+        selectEl.innerHTML = finalList
+          .map(id => `<option value="${id}">${id}</option>`)
+          .join("");
+
+        const currentModel = document.getElementById("modelName").value.trim();
+        const chosen = finalList.includes(currentModel) && !/allam/i.test(currentModel)
+          ? currentModel
+          : pickPreferredModel(finalList);
+
+        document.getElementById("modelName").value = chosen;
+        selectEl.value = chosen;
+        saveSettings();
+
+        wrapEl.style.display = "block";
+        statusEl.textContent = `${UI_TEXT[uiLang].groqLoaded}${finalList.length} (${chosen})`;
+      } catch (err) {
+        statusEl.className = "error-text";
+        statusEl.textContent = err.message || String(err);
+      }
+    }
+
+    function toggleMic() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const statusEl = document.getElementById("micStatus");
+      const btnMic = document.getElementById("btnMic");
+      const ta = document.getElementById("incoming");
+
+      if (!SpeechRec) {
+        statusEl.className = "error-text";
+        statusEl.textContent = UI_TEXT[uiLang].micUnsupported;
+        return;
+      }
+
+      if (isRecording && recognition) {
+        recognition.stop();
+        return;
+      }
+
+      recognition = new SpeechRec();
+      const forcedLang = document.getElementById("lang").value;
+      if (forcedLang === "en") {
+        recognition.lang = "en-US";
+      } else if (forcedLang === "ru") {
+        recognition.lang = "ru-RU";
+      } else {
+        recognition.lang = uiLang === "ru" ? "ru-RU" : "en-US";
+      }
+
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      baseTranscript = ta.value.trim();
+
+      recognition.onstart = () => {
+        isRecording = true;
+        statusEl.className = "status-toast";
+        btnMic.classList.add("mic-active");
+        btnMic.textContent = UI_TEXT[uiLang].micStop;
+        statusEl.textContent = UI_TEXT[uiLang].micListening;
+      };
+
+      recognition.onresult = (event) => {
+        let sessionFinal = "";
+        let interim = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const piece = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            sessionFinal += piece;
+          } else {
+            interim += piece;
+          }
+        }
+
+        if (sessionFinal) {
+          baseTranscript = baseTranscript
+            ? `${baseTranscript.trim()} ${sessionFinal.trim()}`
+            : sessionFinal.trim();
+        }
+
+        ta.value = baseTranscript;
+
+        if (interim.trim()) {
+          statusEl.className = "interim-preview";
+          statusEl.textContent = `... ${interim.trim()}`;
+        } else {
+          statusEl.className = "status-toast";
+          statusEl.textContent = UI_TEXT[uiLang].micListening;
+        }
+      };
+
+      recognition.onerror = () => {
+        statusEl.className = "error-text";
+        statusEl.textContent = UI_TEXT[uiLang].micDenied;
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        ta.value = baseTranscript.trim();
+        btnMic.classList.remove("mic-active");
+        btnMic.textContent = UI_TEXT[uiLang].micStart;
+        statusEl.className = "status-toast";
+        statusEl.textContent = "";
+      };
+
+      recognition.start();
+    }
+
+    function detectLanguage(text) {
+      return /[а-яА-ЯёЁ]/.test(text) ? "ru" : "en";
+    }
+
+    function stopSpeaking() {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      isSpeaking = false;
+      const btn = document.getElementById("btnSpeak");
+      btn.classList.remove("mic-active");
+      btn.textContent = UI_TEXT[uiLang].btnSpeak;
+    }
+
+    function toggleSpeakReply() {
+      if (!("speechSynthesis" in window)) {
+        showStatus(UI_TEXT[uiLang].ttsUnsupported);
+        return;
+      }
+
+      if (isSpeaking) {
+        stopSpeaking();
+        return;
+      }
+
+      const text = document.getElementById("replyText").textContent.trim();
+      if (!text) return;
+
+      window.speechSynthesis.cancel();
+
+      const langCode = detectLanguage(text) === "ru" ? "ru-RU" : "en-US";
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = langCode;
+
+      const voices = window.speechSynthesis.getVoices();
+      const matchedVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(langCode.slice(0, 2)));
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
+
+      const btn = document.getElementById("btnSpeak");
+      utterance.onstart = () => {
+        isSpeaking = true;
+        btn.classList.add("mic-active");
+        btn.textContent = UI_TEXT[uiLang].btnStopSpeak;
+      };
+      utterance.onend = stopSpeaking;
+      utterance.onerror = stopSpeaking;
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function parseModelOutput(rawText) {
+      const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (match) {
+          return JSON.parse(match[0]);
+        }
+        return { hooks: ["Groq Response"], fact: "", reply: cleaned };
+      }
+    }
+
+    async function analyzeWithGroq() {
+      if (isRecording && recognition) {
+        recognition.stop();
+      }
+      const incoming = document.getElementById("incoming").value.trim();
+      if (!incoming) return;
+
+      stopSpeaking();
+
+      const apiKey = document.getElementById("apiKey").value.trim();
+      let model = document.getElementById("modelName").value.trim();
+      if (!model || model === "llama-3.1-8b-instant") {
+        model = DEFAULT_GROQ_MODEL;
+        document.getElementById("modelName").value = model;
+        saveSettings();
+      }
+
+      const stance = document.getElementById("stance").value;
+      const selectedLang = document.getElementById("lang").value;
+      localStorage.setItem("ber_replylang", selectedLang);
+
+      const outLang = selectedLang === "auto" ? detectLanguage(incoming) : selectedLang;
+
+      document.getElementById("outputCard").style.display = "block";
+      document.getElementById("hooksList").innerHTML = "";
+      document.getElementById("coreFact").textContent = "";
+      document.getElementById("replyText").className = "reply-box";
+
+      if (!apiKey) {
+        document.getElementById("replyText").className = "reply-box error-text";
+        document.getElementById("replyText").textContent = UI_TEXT[uiLang].missingKey;
+        document.getElementById("settingsPanel").style.display = "block";
+        return;
+      }
+
+      document.getElementById("replyText").textContent = uiLang === "ru" ? "Groq анализирует сообщение..." : "Groq analyzing message...";
+
+      const systemPrompt = `You are a clinical communication coach specializing in family enmeshment, codependency, and Transactional Analysis (Adult ego state).
+Analyze the incoming message (which may be in Russian or English).
+1. Identify up to 3 specific manipulation, guilt, triangulation, urgency, or enmeshment tactics in "hooks" written in ${uiLang === "ru" ? "Russian" : "English"}.
+2. Extract the literal logistical fact in 1 short sentence in ${uiLang === "ru" ? "Russian" : "English"} (stripping guilt, triangulation, or urgency).
+3. Draft a concise, natural reply in ${outLang === "ru" ? "Russian" : "English"} tailored specifically to this message using the "${stance}" boundary stance:
+   - "gray": minimal, neutral, zero emotional fuel.
+   - "medium": warm, polite, validates autonomy, refuses guilt or responsibility transfer.
+   - "firm": clear boundary and timeline, zero JADE (Justify, Argue, Defend, Explain).
+Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
+
+      try {
+        const r = await fetch(GROQ_CHAT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: incoming }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (!r.ok) {
+          const errBody = await r.text();
+          throw new Error(`GROQ API ${r.status}: ${errBody}`);
+        }
+
+        const data = await r.json();
+        const raw = data.choices?.[0]?.message?.content || "{}";
+        const parsed = parseModelOutput(raw);
+
+        const hooksArr = Array.isArray(parsed.hooks) && parsed.hooks.length > 0 ? parsed.hooks : ["Groq Analysis"];
+        document.getElementById("hooksList").innerHTML = hooksArr.map(h => `<span class="tag">${h}</span>`).join("");
+        document.getElementById("coreFact").textContent = parsed.fact || "";
+        document.getElementById("replyText").textContent = parsed.reply || "";
+      } catch (err) {
+        document.getElementById("replyText").className = "reply-box error-text";
+        document.getElementById("replyText").textContent = err.message || String(err);
+      }
+    }
+
+    function showStatus(msg) {
+      const el = document.getElementById("copyStatus");
+      el.textContent = msg;
+      setTimeout(() => { el.textContent = ""; }, 2000);
+    }
+
+    function copyReply() {
+      const text = document.getElementById("replyText").textContent;
+      navigator.clipboard.writeText(text);
+      showStatus(UI_TEXT[uiLang].copied);
+    }
+
+    function saveToLog() {
+      const logs = JSON.parse(localStorage.getItem("ber_logs") || "[]");
+      logs.unshift({
+        date: new Date().toLocaleString(),
+        incoming: document.getElementById("incoming").value.trim(),
+        reply: document.getElementById("replyText").textContent
+      });
+      localStorage.setItem("ber_logs", JSON.stringify(logs.slice(0, 25)));
+      renderLog();
+      showStatus(UI_TEXT[uiLang].saved);
+    }
+
+    function renderLog() {
+      const logs = JSON.parse(localStorage.getItem("ber_logs") || "[]");
+      const container = document.getElementById("logContainer");
+      if (logs.length === 0) {
+        container.innerHTML = `<div style="color:var(--muted); font-size:0.85rem;">${UI_TEXT[uiLang].emptyLog}</div>`;
+        return;
+      }
+      container.innerHTML = logs.map(item => `
+        <div class="log-item">
+          <div style="color:var(--muted); font-size:0.75rem;">${item.date}</div>
+          <div><strong>In:</strong> ${item.incoming}</div>
+          <div style="color:var(--ok); margin-top:4px;"><strong>Out:</strong> ${item.reply}</div>
+        </div>
+      `).join("");
+    }
+
+    function clearLog() {
+      localStorage.removeItem("ber_logs");
+      renderLog();
+    }
+  </script>
+</body>
+</html>
