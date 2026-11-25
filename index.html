@@ -148,7 +148,7 @@
   <header>
     <div>
       <h1 id="uiTitle">Контроль границ / Boundary Responder</h1>
-      <div id="uiSubtitle" class="subtitle">Groq AI · Удержание границ · Без JADE</div>
+      <div id="uiSubtitle" class="subtitle">Сепарация и границы · Без проекций и JADE</div>
     </div>
     <div class="header-controls">
       <button class="secondary" id="uiLangBtn" onclick="toggleUiLang()">EN / RU</button>
@@ -173,7 +173,7 @@
 
   <div class="card">
     <div id="uiGrounding" class="grounding">
-      <strong>Позиция Взрослого:</strong> Вы не обязаны обслуживать чужую тревогу, скуку или одиночество. Не используйте <strong>JADE</strong>: не оправдывайтесь, не спорьте, не защищайтесь и не объясняйте лишнего.
+      <strong>Автономия взрослого:</strong> Вы — отдельный взрослый человек со своей жизнью и отношениями. Родительские проекции их собственных связей, ожиданий и тревог — это их история, а не ваше расписание. Не используйте <strong>JADE</strong>.
     </div>
   </div>
 
@@ -208,13 +208,13 @@
   </div>
 
   <div id="outputCard" class="card" style="display:none;">
-    <label id="lblHooks">Обнаруженные крючки</label>
+    <label id="lblHooks">Обнаруженные крючки и проекции</label>
     <div id="hooksList" style="margin-bottom:12px;"></div>
 
-    <label id="lblFact">Сухой факт (без эмоционального давления)</label>
+    <label id="lblFact">Сухой факт (без проекций и давления)</label>
     <div id="coreFact" style="font-size:0.9rem; color:#cbd5e1; margin-bottom:12px;"></div>
 
-    <label id="lblReply">Готовый ответ с удержанием границ</label>
+    <label id="lblReply">Готовый ответ с удержанием автономии</label>
     <div id="replyText" class="reply-box"></div>
 
     <div class="actions">
@@ -247,7 +247,7 @@
     const UI_TEXT = {
       ru: {
         title: "Контроль границ / Boundary Responder",
-        subtitle: "Groq AI · Удержание границ · Без JADE",
+        subtitle: "Сепарация и границы · Без проекций и JADE",
         settingsBtn: "Groq API",
         apiKey: "Groq API Ключ (сохраняется только в вашем браузере)",
         model: "Модель Groq (Model ID)",
@@ -256,7 +256,7 @@
         fetchingGroq: "Загрузка моделей Groq...",
         groqLoaded: "Загружено моделей: ",
         groqNone: "Активные модели не найдены.",
-        grounding: "<strong>Позиция Взрослого:</strong> Вы не обязаны обслуживать чужую тревогу, скуку или одиночество. Не используйте <strong>JADE</strong>: не оправдывайтесь, не спорьте, не защищайтесь и не объясняйте лишнего.",
+        grounding: "<strong>Автономия взрослого:</strong> Вы — отдельный взрослый человек со своей жизнью и отношениями. Родительские проекции их собственных связей, ожиданий и тревог — это их история, а не ваше расписание. Не используйте <strong>JADE</strong>.",
         incoming: "1. Вставьте или продиктуйте сообщение (RU / EN)",
         placeholder: "Вставьте сообщение или нажмите «Микрофон / Mic»...",
         micStart: "Микрофон / Mic",
@@ -270,9 +270,9 @@
         optFirm: "Firm Limit (Жёсткая граница и рамка времени)",
         replyLang: "3. Язык ответа (Output Language)",
         btnGenerate: "Разобрать через Groq и создать ответ",
-        hooks: "Обнаруженные крючки",
-        fact: "Сухой факт (без эмоционального давления)",
-        reply: "Готовый ответ с удержанием границ",
+        hooks: "Обнаруженные крючки и проекции",
+        fact: "Сухой факт (без проекций и давления)",
+        reply: "Готовый ответ с удержанием автономии",
         btnCopy: "Скопировать ответ",
         btnSpeak: "Озвучить / Speak",
         btnStopSpeak: "Стоп / Stop",
@@ -287,7 +287,7 @@
       },
       en: {
         title: "Boundary & Enmeshment Responder",
-        subtitle: "Groq AI · Hold your frame · No JADE",
+        subtitle: "Independence & boundaries · No projections or JADE",
         settingsBtn: "Groq API",
         apiKey: "Groq API Key (Stored locally in your browser)",
         model: "Groq Model ID",
@@ -296,7 +296,7 @@
         fetchingGroq: "Fetching Groq models...",
         groqLoaded: "Loaded models: ",
         groqNone: "No active models returned.",
-        grounding: "<strong>Adult Ego-State Check:</strong> You are not responsible for regulating another adult's boredom, loneliness, or anxiety. Do not <strong>J</strong>ustify, <strong>A</strong>rgue, <strong>D</strong>efend, or <strong>E</strong>xplain.",
+        grounding: "<strong>Adult Autonomy Check:</strong> You are an independent adult with your own life and relationships. A parent projecting their own relationships with loved ones, expectations, or anxieties onto you is their story, not your obligation. Do not <strong>J</strong>ustify, <strong>A</strong>rgue, <strong>D</strong>efend, or <strong>E</strong>xplain.",
         incoming: "1. Paste or Dictate Incoming Message (RU / EN)",
         placeholder: "Paste a message or press Mic to speak...",
         micStart: "Mic / Speak",
@@ -310,9 +310,9 @@
         optFirm: "Firm Limit (Clear boundary & timeline)",
         replyLang: "3. Reply Language (Output Language)",
         btnGenerate: "Analyze with Groq & Draft Reply",
-        hooks: "Detected Enmeshment / Manipulation Hooks",
-        fact: "Literal Core Fact (Without Emotional Subtext)",
-        reply: "Suggested Boundary-Safe Reply",
+        hooks: "Detected Enmeshment, Projections & Hooks",
+        fact: "Literal Core Fact (Without Projections or Pressure)",
+        reply: "Suggested Autonomy-Preserving Reply",
         btnCopy: "Copy Reply",
         btnSpeak: "Speak Reply",
         btnStopSpeak: "Stop Speaking",
@@ -326,6 +326,24 @@
         missingKey: "Enter a Groq API key in Groq API settings before generating."
       }
     };
+
+    function buildSystemPrompt(uiLanguage, outLanguage, boundaryStance) {
+      return `You are a clinical communication coach specializing in parent-child enmeshment, codependency, differentiation/independence from parents, and Transactional Analysis (Adult ego state).
+Pay special attention to:
+- Enmeshment and codependency (treating an adult child as an emotional caretaker, extension of self, or on-demand confidant/helper).
+- Independence and differentiation from parents (asserting separate adult boundaries, schedules, choices, and emotional ownership).
+- Relationship projection: when a parent projects their own relationships with loved ones, partners, spouses, friends, or romantic/relational scripts onto the child or uses third-party relational comparisons/triangulation.
+
+Analyze the incoming message (which may be in Russian or English).
+1. Identify up to 3 specific dynamics in "hooks" written in ${uiLanguage === "ru" ? "Russian" : "English"} (such as relationship projection, parent-child enmeshment, guilt/codependency hook, autonomy pushback, or triangulation).
+2. Extract the literal core fact in 1 short sentence in ${uiLanguage === "ru" ? "Russian" : "English"}, stripping away relationship projections, guilt, urgency, and emotional enmeshment.
+3. Draft a concise, natural reply in ${outLanguage === "ru" ? "Russian" : "English"} tailored to this exact message using the "${boundaryStance}" boundary stance:
+   - "gray": minimal, neutral, non-reactive, zero emotional fuel.
+   - "medium": calm, polite, warm enough without over-attuning; holds adult independence and refuses projected relational scripts or guilt transfer.
+   - "firm": clear adult boundary and timeline; protects independence and separates the parent's relationship projections from your own life; zero JADE (Justify, Argue, Defend, Explain).
+
+Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
+    }
 
     function applyUiLang() {
       const t = UI_TEXT[uiLang];
@@ -652,15 +670,7 @@
 
       document.getElementById("replyText").textContent = uiLang === "ru" ? "Groq анализирует сообщение..." : "Groq analyzing message...";
 
-      const systemPrompt = `You are a clinical communication coach specializing in family enmeshment, codependency, and Transactional Analysis (Adult ego state).
-Analyze the incoming message (which may be in Russian or English).
-1. Identify up to 3 specific manipulation, guilt, triangulation, urgency, or enmeshment tactics in "hooks" written in ${uiLang === "ru" ? "Russian" : "English"}.
-2. Extract the literal logistical fact in 1 short sentence in ${uiLang === "ru" ? "Russian" : "English"} (stripping guilt, triangulation, or urgency).
-3. Draft a concise, natural reply in ${outLang === "ru" ? "Russian" : "English"} tailored specifically to this message using the "${stance}" boundary stance:
-   - "gray": minimal, neutral, zero emotional fuel.
-   - "medium": warm, polite, validates autonomy, refuses guilt or responsibility transfer.
-   - "firm": clear boundary and timeline, zero JADE (Justify, Argue, Defend, Explain).
-Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
+      const systemPrompt = buildSystemPrompt(uiLang, outLang, stance);
 
       try {
         const r = await fetch(GROQ_CHAT_URL, {
