@@ -1,978 +1,789 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boundary &amp; Enmeshment Responder</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --border: #334155;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --accent-hover: #0284c7;
-      --warn: #f59e0b;
-      --ok: #10b981;
-      --rec: #ef4444;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      padding: 16px;
-      max-width: 760px;
-      margin: 0 auto;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 18px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
-      flex-wrap: wrap;
-    }
-    h1 { font-size: 1.2rem; font-weight: 700; }
-    .subtitle { font-size: 0.85rem; color: var(--muted); }
-    .header-controls { display: flex; gap: 8px; align-items: center; }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    .label-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-      flex-wrap: wrap;
-    }
-    label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: var(--muted);
-    }
-    .label-row label { margin-bottom: 0; }
-    textarea, input, select {
-      width: 100%;
-      background: #0f172a;
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 10px 12px;
-      font-size: 0.95rem;
-      margin-bottom: 12px;
-    }
-    textarea { min-height: 110px; resize: vertical; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 540px) { .row { grid-template-columns: 1fr; } }
-    button {
-      background: var(--accent);
-      color: #0f172a;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 16px;
-      font-size: 0.95rem;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    button:hover { background: var(--accent-hover); color: #fff; }
-    button.secondary {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-weight: 600;
-      padding: 8px 12px;
-      font-size: 0.85rem;
-    }
-    button.secondary:hover { background: #334155; }
-    button.mic-active {
-      background: var(--rec);
-      border-color: var(--rec);
-      color: #fff;
-    }
-    .tag {
-      display: inline-block;
-      background: rgba(245, 158, 11, 0.15);
-      color: var(--warn);
-      border: 1px solid rgba(245, 158, 11, 0.4);
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      margin: 0 6px 6px 0;
-    }
-    .reply-box {
-      background: #0f172a;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 8px;
-      white-space: pre-wrap;
-      font-size: 0.95rem;
-    }
-    .wtf-box {
-      background: #0f172a;
-      border-left: 3px solid var(--warn);
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 12px;
-      white-space: pre-wrap;
-      font-size: 0.92rem;
-      color: #fde68a;
-    }
-    .summary-box {
-      background: #0f172a;
-      border-left: 3px solid var(--accent);
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 12px;
-      white-space: pre-wrap;
-      font-size: 0.92rem;
-      color: #e2e8f0;
-    }
-    .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
-    .grounding {
-      border-left: 3px solid var(--ok);
-      padding-left: 12px;
-      font-size: 0.9rem;
-      color: #cbd5e1;
-    }
-    details summary {
-      cursor: pointer;
-      font-size: 0.85rem;
-      color: var(--muted);
-      font-weight: 600;
-    }
-    .log-item {
-      border-top: 1px solid var(--border);
-      padding-top: 10px;
-      margin-top: 10px;
-      font-size: 0.85rem;
-    }
-    .status-toast { font-size: 0.85rem; color: var(--ok); margin-left: 4px; }
-    .interim-preview { font-style: italic; color: var(--accent); font-size: 0.88rem; }
-    .error-text { color: #f87171; font-size: 0.9rem; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Persona & Boundary Responder</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --border: #334155;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-hover: #0284c7;
+  --warn: #f59e0b;
+  --ok: #10b981;
+  --rec: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; padding: 16px; max-width: 780px; margin: 0 auto; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; }
+h1 { font-size: 1.2rem; font-weight: 700; }
+.subtitle { font-size: 0.85rem; color: var(--muted); }
+.header-controls { display: flex; gap: 8px; align-items: center; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+.label-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--muted); }
+.label-row label { margin-bottom: 0; }
+textarea, input, select { width: 100%; background: #0f172a; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 0.95rem; margin-bottom: 12px; }
+textarea { min-height: 110px; resize: vertical; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+.pill-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.pill { background: #0f172a; border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+.pill:hover { background: #334155; }
+.pill.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+.pill.mother-active { background: var(--ok); color: #0f172a; border-color: var(--ok); }
+button { background: var(--accent); color: #0f172a; border: none; border-radius: 8px; padding: 10px 16px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+button:hover { background: var(--accent-hover); color: #fff; }
+button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); font-weight: 600; padding: 8px 12px; font-size: 0.85rem; }
+button.secondary:hover { background: #334155; }
+button.mic-active { background: var(--rec); border-color: var(--rec); color: #fff; }
+.tag { display: inline-block; background: rgba(245, 158, 11, 0.15); color: var(--warn); border: 1px solid rgba(245, 158, 11, 0.4); padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; margin: 0 6px 6px 0; }
+.reply-box { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 8px; white-space: pre-wrap; font-size: 0.95rem; }
+.wtf-box { background: #0f172a; border-left: 3px solid var(--warn); border-radius: 8px; padding: 12px; margin-top: 12px; white-space: pre-wrap; font-size: 0.92rem; color: #fde68a; }
+.summary-box { background: #0f172a; border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px; margin-top: 12px; white-space: pre-wrap; font-size: 0.92rem; color: #e2e8f0; }
+.actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+.grounding { border-left: 3px solid var(--ok); padding-left: 12px; font-size: 0.88rem; color: #cbd5e1; margin-top: 4px; margin-bottom: 12px; }
+details summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+.log-item { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; font-size: 0.85rem; }
+.status-toast { font-size: 0.85rem; color: var(--ok); margin-left: 4px; }
+.interim-preview { font-style: italic; color: var(--accent); font-size: 0.88rem; }
+.error-text { color: #f87171; font-size: 0.9rem; }
+</style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1 id="uiTitle">Контроль границ / Boundary Responder</h1>
-      <div id="uiSubtitle" class="subtitle">Сепарация и границы · Без проекций и JADE</div>
-    </div>
-    <div class="header-controls">
-      <button class="secondary" id="uiLangBtn" onclick="toggleUiLang()">EN / RU</button>
-      <button class="secondary" id="uiSettingsBtn" onclick="toggleSettings()">Groq API</button>
-    </div>
-  </header>
 
-  <div id="settingsPanel" class="card" style="display:none;">
-    <label id="lblApiKey">Groq API Ключ (сохраняется только в вашем браузере)</label>
-    <input type="password" id="apiKey" placeholder="gsk_..." onchange="saveSettings()" />
-    <div class="label-row">
-      <label id="lblModel" for="modelName">Модель Groq (Model ID)</label>
-      <button type="button" class="secondary" id="btnFetchGroq" onclick="fetchGroqModels()">Загрузить модели / Fetch Models</button>
-    </div>
-    <input type="text" id="modelName" placeholder="openai/gpt-oss-20b" onchange="saveSettings()" />
-    <div id="groqModelsWrap" style="display:none;">
-      <label id="lblGroqList" for="groqModelSelect">Активные модели Groq</label>
-      <select id="groqModelSelect" onchange="applySelectedGroqModel()"></select>
-    </div>
-    <div id="apiStatus" class="status-toast" style="margin-bottom:6px;"></div>
+<header>
+  <div>
+    <h1 id="uiTitle">Persona & Boundary Responder</h1>
+    <div id="uiSubtitle" class="subtitle">Priest · Senatorial · Professor · Mother (No Enmeshment / JADE)</div>
+  </div>
+  <div class="header-controls">
+    <button class="secondary" id="uiLangBtn" onclick="toggleUiLang()">EN / RU</button>
+    <button class="secondary" id="uiSettingsBtn" onclick="toggleSettings()">Groq API</button>
+  </div>
+</header>
+
+<div id="settingsPanel" class="card" style="display:none;">
+  <label id="lblApiKey" for="apiKey">Groq API Key (Stored locally in your browser)</label>
+  <input type="password" id="apiKey" placeholder="gsk_..." onchange="saveSettings()" />
+  <div class="label-row">
+    <label id="lblModel" for="modelName">Groq Model ID</label>
+    <button type="button" class="secondary" id="btnFetchGroq" onclick="fetchGroqModels()">Fetch Models</button>
+  </div>
+  <input type="text" id="modelName" placeholder="openai/gpt-oss-20b" onchange="saveSettings()" />
+  <div id="groqModelsWrap" style="display:none;">
+    <label id="lblGroqList" for="groqModelSelect">Active Groq Models</label>
+    <select id="groqModelSelect" onchange="applySelectedGroqModel()"></select>
+  </div>
+  <div id="apiStatus" class="status-toast" style="margin-bottom:6px;"></div>
+</div>
+
+<div class="card">
+  <label id="lblPersona">1. Choose Persona / Mode</label>
+  <div class="pill-group" id="personaGroup">
+    <button type="button" class="pill active" data-persona="priest" onclick="selectPersona('priest')" id="pPriest">Priest</button>
+    <button type="button" class="pill" data-persona="senatorial" onclick="selectPersona('senatorial')" id="pSenatorial">Senatorial Hearing</button>
+    <button type="button" class="pill" data-persona="professor" onclick="selectPersona('professor')" id="pProfessor">Professor</button>
+    <button type="button" class="pill" data-persona="mother" onclick="selectPersona('mother')" id="pMother">Mother (Cute &amp; Clear Boundary)</button>
   </div>
 
-  <div class="card">
+  <div id="motherOptions" style="display:none;">
     <div id="uiGrounding" class="grounding">
-      <strong>Автономия взрослого:</strong> Вы — отдельный взрослый человек со своей жизнью и отношениями. Родительские проекции их собственных связей, ожиданий и тревог — это их история, а не ваше расписание. Не используйте <strong>JADE</strong>.
+      <strong>Adult Autonomy Check:</strong> Warm and polite on the surface, zero enmeshment underneath. Do not deny, lecture, control, or <strong>JADE</strong> (Justify, Argue, Defend, Explain)—just acknowledge kindly and move on.
+    </div>
+    <label id="lblStance" for="stance">Boundary Stance</label>
+    <select id="stance">
+      <option value="medium" id="optMedium">Medium Chill (Cute, warm, detached — move right along)</option>
+      <option value="gray" id="optGray">Gray Rock (Minimal, neutral, factual)</option>
+      <option value="firm" id="optFirm">Firm Limit (Warm &amp; clear time/topic limit)</option>
+    </select>
+  </div>
+
+  <div id="standardAudienceWrap">
+    <label id="lblAudience">2. Target Audience</label>
+    <div class="pill-group">
+      <button type="button" class="pill active" data-audience="opponents" onclick="selectAudience('opponents')" id="aOpponents">To Opponents</button>
+      <button type="button" class="pill" data-audience="self" onclick="selectAudience('self')" id="aSelf">To Yourself</button>
     </div>
   </div>
 
-  <div class="card">
-    <div class="label-row">
-      <label id="lblIncoming" for="incoming">1. Вставьте или продиктуйте сообщение (RU / EN)</label>
-      <button type="button" class="secondary" id="btnMic" onclick="toggleMic()">Микрофон / Mic</button>
+  <div class="label-row">
+    <label id="lblIncoming" for="incoming">3. Paste or Dictate Message (EN / RU)</label>
+    <button type="button" class="secondary" id="btnMic" onclick="toggleMic()">Mic / Speak</button>
+  </div>
+  <textarea id="incoming" placeholder="Paste incoming message or press Mic to dictate..."></textarea>
+  <div id="micStatus" class="status-toast" style="margin-bottom:10px;"></div>
+
+  <div class="row">
+    <div>
+      <label id="lblReplyLang" for="lang">4. Reply Language</label>
+      <select id="lang">
+        <option value="auto">Auto-detect (Match incoming)</option>
+        <option value="en">English</option>
+        <option value="ru">Русский (Russian)</option>
+      </select>
     </div>
-    <textarea id="incoming" placeholder="Вставьте сообщение или нажмите «Микрофон / Mic»..."></textarea>
-    <div id="micStatus" class="status-toast" style="margin-bottom:10px;"></div>
-
-    <div class="row">
-      <div>
-        <label id="lblStance" for="stance">2. Стиль границ</label>
-        <select id="stance">
-          <option value="medium" id="optMedium">Medium Chill (Спокойно, тепло, без вовлечения)</option>
-          <option value="gray" id="optGray">Gray Rock (Серый камень: сухо и по факту)</option>
-          <option value="firm" id="optFirm">Firm Limit (Жёсткая граница и рамка времени)</option>
-        </select>
-      </div>
-      <div>
-        <label id="lblReplyLang" for="lang">3. Язык ответа (Output Language)</label>
-        <select id="lang">
-          <option value="auto">Авто (как во входящем / Auto-detect)</option>
-          <option value="ru">Русский (Russian)</option>
-          <option value="en">English (Английский)</option>
-        </select>
-      </div>
-    </div>
-
-    <button id="btnGenerate" onclick="analyzeWithGroq()" style="width:100%;">Разобрать через Groq и создать ответ</button>
-
-    <div class="actions">
-      <button type="button" class="secondary" id="btnWtf" onclick="explainWtf()">Что за хрень? / WTF Is Going On?</button>
-      <button type="button" class="secondary" id="btnSummary" onclick="summarizeOutput()">Сжать (1–2 предл.) / Summary</button>
-      <button type="button" class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Озвучить / Speak</button>
-    </div>
-
-    <div id="wtfWrap" style="display:none;">
-      <label id="lblWtfOut" style="margin-top:12px;">Прямой разбор для себя (без фильтра)</label>
-      <div id="wtfText" class="wtf-box"></div>
-    </div>
-
-    <div id="summaryWrap" style="display:none;">
-      <label id="lblSummaryOut" style="margin-top:12px;">Короткий вывод (макс. 1–2 предложения)</label>
-      <div id="summaryText" class="summary-box"></div>
+    <div style="display:flex; align-items:flex-end;">
+      <button id="btnGenerate" onclick="generateResponse()" style="width:100%; margin-bottom:12px;">Generate Response</button>
     </div>
   </div>
 
-  <div id="outputCard" class="card" style="display:none;">
-    <label id="lblHooks">Обнаруженные крючки и проекции</label>
+  <div class="actions">
+    <button type="button" class="secondary" id="btnSummary" onclick="summarizeOutput()">Summary (1–2 sentences)</button>
+    <button type="button" class="secondary" id="btnSpeak" onclick="toggleSpeakReply()">Speak</button>
+    <button type="button" class="secondary" id="btnWtf" onclick="explainWtf()">WTF Is Going On?</button>
+  </div>
+
+  <div id="summaryWrap" style="display:none;">
+    <label id="lblSummaryOut" style="margin-top:12px;">Short Summary (1–2 sentences max)</label>
+    <div id="summaryText" class="summary-box"></div>
+  </div>
+
+  <div id="wtfWrap" style="display:none;">
+    <label id="lblWtfOut" style="margin-top:12px;">Unfiltered Reality Check (For Yourself)</label>
+    <div id="wtfText" class="wtf-box"></div>
+  </div>
+</div>
+
+<div id="outputCard" class="card" style="display:none;">
+  <div id="hooksSection">
+    <label id="lblHooks">Detected Hooks &amp; Enmeshment</label>
     <div id="hooksList" style="margin-bottom:12px;"></div>
-
-    <label id="lblFact">Сухой факт (без проекций и давления)</label>
+    <label id="lblFact">Literal Core Fact (Zero Guilt / Projection)</label>
     <div id="coreFact" style="font-size:0.9rem; color:#cbd5e1; margin-bottom:12px;"></div>
-
-    <label id="lblReply">Готовый добрый ответ маме (копировать и отправить)</label>
-    <div id="replyText" class="reply-box"></div>
-
-    <div class="actions">
-      <button id="btnCopy" onclick="copyReply()">Скопировать ответ</button>
-      <button class="secondary" id="btnSave" onclick="saveToLog()">Сохранить в журнал</button>
-      <span id="copyStatus" class="status-toast"></span>
-    </div>
   </div>
-
-  <div class="card">
-    <details>
-      <summary id="lblLogSummary">Личный журнал границ (хранится локально в браузере)</summary>
-      <div id="logContainer" style="margin-top:10px;"></div>
-      <button class="secondary" id="btnClearLog" onclick="clearLog()" style="margin-top:12px; font-size:0.8rem;">Очистить журнал</button>
-    </details>
+  <label id="lblReply">Ready-to-Send Response</label>
+  <div id="replyText" class="reply-box"></div>
+  <div class="actions">
+    <button id="btnCopy" onclick="copyReply()">Copy Response</button>
+    <button class="secondary" id="btnSave" onclick="saveToLog()">Save to Log</button>
+    <span id="copyStatus" class="status-toast"></span>
   </div>
+</div>
 
-  <script>
-    const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
-    const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
-    const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
+<div class="card">
+  <details>
+    <summary id="lblLogSummary">Saved History Log (Local Browser Storage)</summary>
+    <div id="logContainer" style="margin-top:10px;"></div>
+    <button class="secondary" id="btnClearLog" onclick="clearLog()" style="margin-top:12px; font-size:0.8rem;">Clear Log</button>
+  </details>
+</div>
 
-    let uiLang = localStorage.getItem("ber_uilang") || "ru";
-    let recognition = null;
-    let isRecording = false;
-    let isSpeaking = false;
-    let baseTranscript = "";
+<script>
+const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
+const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
 
-    const UI_TEXT = {
-      ru: {
-        title: "Контроль границ / Boundary Responder",
-        subtitle: "Сепарация и границы · Без проекций и JADE",
-        settingsBtn: "Groq API",
-        apiKey: "Groq API Ключ (сохраняется только в вашем браузере)",
-        model: "Модель Groq (Model ID)",
-        fetchGroq: "Загрузить модели / Fetch Models",
-        groqList: "Активные модели Groq",
-        fetchingGroq: "Загрузка моделей Groq...",
-        groqLoaded: "Загружено моделей: ",
-        groqNone: "Активные модели не найдены.",
-        grounding: "<strong>Автономия взрослого:</strong> Вы — отдельный взрослый человек со своей жизнью и отношениями. Родительские проекции их собственных связей, ожиданий и тревог — это их история, а не ваше расписание. Не используйте <strong>JADE</strong>.",
-        incoming: "1. Вставьте или продиктуйте сообщение (RU / EN)",
-        placeholder: "Вставьте сообщение или нажмите «Микрофон / Mic»...",
-        micStart: "Микрофон / Mic",
-        micStop: "Стоп / Stop",
-        micListening: "Слушаю... говорите.",
-        micUnsupported: "Голосовой ввод не поддерживается в этом браузере.",
-        micDenied: "Доступ к микрофону запрещён или произошла ошибка.",
-        stance: "2. Стиль границ",
-        optMedium: "Medium Chill (Спокойно, тепло, без вовлечения)",
-        optGray: "Gray Rock (Серый камень: сухо и по факту)",
-        optFirm: "Firm Limit (Жёсткая граница и рамка времени)",
-        replyLang: "3. Язык ответа (Output Language)",
-        btnGenerate: "Разобрать через Groq и создать ответ",
-        hooks: "Обнаруженные крючки и проекции",
-        fact: "Сухой факт (без проекций и давления)",
-        reply: "Готовый добрый ответ маме (копировать и отправить)",
-        btnCopy: "Скопировать ответ",
-        btnWtf: "Что за хрень? / WTF Is Going On?",
-        wtfOut: "Прямой разбор для себя (без фильтра)",
-        wtfLoading: "Разбираю, что тут реально происходит...",
-        btnSpeak: "Озвучить / Speak",
-        btnStopSpeak: "Стоп / Stop",
-        ttsUnsupported: "Озвучивание не поддерживается в этом браузере.",
-        btnSummary: "Сжать (1–2 предл.) / Summary",
-        summaryOut: "Короткий вывод (макс. 1–2 предложения)",
-        summarizing: "Сжимаю до 1–2 предложений...",
-        btnSave: "Сохранить в журнал",
-        logSummary: "Личный журнал границ (хранится локально в браузере)",
-        btnClearLog: "Очистить журнал",
-        copied: "Скопировано!",
-        saved: "Сохранено!",
-        emptyLog: "Записей пока нет.",
-        missingKey: "Укажите Groq API ключ в настройках перед запуском.",
-        missingInput: "Сначала вставьте или продиктуйте текст сообщения."
-      },
-      en: {
-        title: "Boundary & Enmeshment Responder",
-        subtitle: "Independence & boundaries · No projections or JADE",
-        settingsBtn: "Groq API",
-        apiKey: "Groq API Key (Stored locally in your browser)",
-        model: "Groq Model ID",
-        fetchGroq: "Fetch Models",
-        groqList: "Active Groq Models",
-        fetchingGroq: "Fetching Groq models...",
-        groqLoaded: "Loaded models: ",
-        groqNone: "No active models returned.",
-        grounding: "<strong>Adult Autonomy Check:</strong> You are an independent adult with your own life and relationships. A parent projecting their own relationships with loved ones, expectations, or anxieties onto you is their story, not your obligation. Do not <strong>J</strong>ustify, <strong>A</strong>rgue, <strong>D</strong>efend, or <strong>E</strong>xplain.",
-        incoming: "1. Paste or Dictate Incoming Message (RU / EN)",
-        placeholder: "Paste a message or press Mic to speak...",
-        micStart: "Mic / Speak",
-        micStop: "Stop Mic",
-        micListening: "Listening... speak now.",
-        micUnsupported: "Speech recognition is not supported in this browser.",
-        micDenied: "Microphone permission blocked or speech error occurred.",
-        stance: "2. Boundary Stance",
-        optMedium: "Medium Chill (Warm, calm, detached)",
-        optGray: "Gray Rock (Minimal, neutral, factual)",
-        optFirm: "Firm Limit (Clear boundary & timeline)",
-        replyLang: "3. Reply Language (Output Language)",
-        btnGenerate: "Analyze with Groq & Draft Reply",
-        hooks: "Detected Enmeshment, Projections & Hooks",
-        fact: "Literal Core Fact (Without Projections or Pressure)",
-        reply: "Kind Reply for Mom (Copy & Paste)",
-        btnCopy: "Copy Reply",
-        btnWtf: "WTF Is Going On?",
-        wtfOut: "Straight Self-Talk / Reality Check (Unfiltered)",
-        wtfLoading: "Checking what's actually going on...",
-        btnSpeak: "Speak Reply",
-        btnStopSpeak: "Stop Speaking",
-        ttsUnsupported: "Text-to-speech is not supported in this browser.",
-        btnSummary: "Summary (1–2 sentences)",
-        summaryOut: "Short Summary (1–2 sentences max)",
-        summarizing: "Summarizing into 1–2 sentences...",
-        btnSave: "Save to Private Log",
-        logSummary: "Private Boundary Log (Stored Locally)",
-        btnClearLog: "Clear Log",
-        copied: "Copied!",
-        saved: "Saved!",
-        emptyLog: "No saved entries yet.",
-        missingKey: "Enter a Groq API key in Groq API settings before generating.",
-        missingInput: "Paste or dictate a message first."
-      }
-    };
+let uiLang = localStorage.getItem("pr_uilang") || "en";
+let currentPersona = localStorage.getItem("pr_persona") || "priest";
+let currentAudience = localStorage.getItem("pr_audience") || "opponents";
+let recognition = null;
+let isRecording = false;
+let isSpeaking = false;
+let baseTranscript = "";
 
-    function buildSystemPrompt(uiLanguage, outLanguage, boundaryStance) {
-      return `You are a clinical communication coach specializing in parent-child enmeshment, codependency, differentiation/independence from parents, and Transactional Analysis (Adult ego state).
-Pay special attention to:
-- Enmeshment and codependency (treating an adult child as an emotional caretaker, extension of self, or on-demand confidant/helper).
-- Independence and differentiation from parents (asserting separate adult boundaries, schedules, choices, and emotional ownership).
-- Relationship projection: when a parent projects their own relationships with loved ones, partners, spouses, friends, or romantic/relational scripts onto the child or uses third-party relational comparisons/triangulation.
+const UI_TEXT = {
+  en: {
+    title: "Persona & Boundary Responder",
+    subtitle: "Priest · Senatorial · Professor · Mother (No Enmeshment / JADE)",
+    settingsBtn: "Groq API",
+    apiKey: "Groq API Key (Stored locally in your browser)",
+    model: "Groq Model ID",
+    fetchGroq: "Fetch Models",
+    groqList: "Active Groq Models",
+    fetchingGroq: "Fetching Groq models...",
+    groqLoaded: "Loaded models: ",
+    groqNone: "No active models returned.",
+    persona: "1. Choose Persona / Mode",
+    pPriest: "Priest",
+    pSenatorial: "Senatorial Hearing",
+    pProfessor: "Professor",
+    pMother: "Mother (Cute & Clear Boundary)",
+    grounding: "<strong>Adult Autonomy Check:</strong> Warm and polite on the surface, zero enmeshment underneath. Do not deny, lecture, control, or <strong>JADE</strong> (Justify, Argue, Defend, Explain)—just acknowledge kindly and move on.",
+    stance: "Boundary Stance",
+    optMedium: "Medium Chill (Cute, warm, detached — move right along)",
+    optGray: "Gray Rock (Minimal, neutral, factual)",
+    optFirm: "Firm Limit (Warm & clear time/topic limit)",
+    audience: "2. Target Audience",
+    aOpponents: "To Opponents",
+    aSelf: "To Yourself",
+    incoming: "3. Paste or Dictate Message (EN / RU)",
+    placeholder: "Paste incoming message or press Mic to dictate...",
+    micStart: "Mic / Speak",
+    micStop: "Stop Mic",
+    micListening: "Listening... speak now.",
+    micUnsupported: "Speech recognition is not supported in this browser.",
+    micDenied: "Microphone permission blocked or speech error occurred.",
+    replyLang: "4. Reply Language",
+    btnGenerate: "Generate Response",
+    btnSummary: "Summary (1–2 sentences)",
+    btnSpeak: "Speak",
+    btnStopSpeak: "Stop Speaking",
+    btnWtf: "WTF Is Going On?",
+    summaryOut: "Short Summary (1–2 sentences max)",
+    summarizing: "Summarizing into 1–2 sentences...",
+    wtfOut: "Unfiltered Reality Check (For Yourself)",
+    wtfLoading: "Checking what's actually going on...",
+    hooks: "Detected Hooks & Enmeshment",
+    fact: "Literal Core Fact (Zero Guilt / Projection)",
+    replyMother: "Cute, Polite Reply for Mom (Copy & Send)",
+    replyStandard: "Generated Response",
+    btnCopy: "Copy Response",
+    btnSave: "Save to Log",
+    logSummary: "Saved History Log (Local Browser Storage)",
+    btnClearLog: "Clear Log",
+    copied: "Copied!",
+    saved: "Saved!",
+    emptyLog: "No saved entries yet.",
+    missingKey: "Enter your Groq API key in Groq API settings first.",
+    missingInput: "Paste or dictate a message first.",
+    ttsUnsupported: "Text-to-speech is not supported in this browser."
+  },
+  ru: {
+    title: "Persona & Boundary Responder",
+    subtitle: "Священник · Сенат · Профессор · Мама (Без слияния и JADE)",
+    settingsBtn: "Groq API",
+    apiKey: "Groq API Ключ (хранится локально в браузере)",
+    model: "Модель Groq (Model ID)",
+    fetchGroq: "Загрузить модели",
+    groqList: "Активные модели Groq",
+    fetchingGroq: "Загрузка моделей Groq...",
+    groqLoaded: "Загружено моделей: ",
+    groqNone: "Активные модели не найдены.",
+    persona: "1. Выберите режим / персону",
+    pPriest: "Священник (Priest)",
+    pSenatorial: "Сенат (Senatorial)",
+    pProfessor: "Профессор (Professor)",
+    pMother: "Мама (Тёплая граница без слияния)",
+    grounding: "<strong>Автономия взрослого:</strong> Мило и вежливо снаружи, ноль слияния внутри. Не отрицайте, не спорьте, не контролируйте и не используйте <strong>JADE</strong> — просто тепло ответьте и идите дальше по своим делам.",
+    stance: "Стиль границы",
+    optMedium: "Medium Chill (Мило, тепло, легко — и сразу дальше)",
+    optGray: "Gray Rock (Серый камень: сухо и нейтрально)",
+    optFirm: "Firm Limit (Тёплая, но чёткая рамка времени/темы)",
+    audience: "2. Адресат",
+    aOpponents: "Оппонентам (To Opponents)",
+    aSelf: "Для себя (To Yourself)",
+    incoming: "3. Вставьте или продиктуйте сообщение (EN / RU)",
+    placeholder: "Вставьте текст или нажмите «Микрофон»...",
+    micStart: "Микрофон / Mic",
+    micStop: "Стоп / Stop",
+    micListening: "Слушаю... говорите.",
+    micUnsupported: "Голосовой ввод не поддерживается в этом браузере.",
+    micDenied: "Доступ к микрофону запрещён или ошибка распознавания.",
+    replyLang: "4. Язык ответа",
+    btnGenerate: "Сгенерировать ответ",
+    btnSummary: "Сжать (1–2 предл.)",
+    btnSpeak: "Озвучить / Speak",
+    btnStopSpeak: "Стоп / Stop",
+    btnWtf: "Что происходит? / WTF",
+    summaryOut: "Короткий вывод (1–2 предложения)",
+    summarizing: "Сжимаю до 1–2 предложений...",
+    wtfOut: "Прямой разбор для себя (без фильтра)",
+    wtfLoading: "Смотрю, что тут реально происходит...",
+    hooks: "Обнаруженные крючки и слияние",
+    fact: "Сухой факт (без вины и проекций)",
+    replyMother: "Милый, добрый ответ маме (скопировать и отправить)",
+    replyStandard: "Готовый ответ",
+    btnCopy: "Скопировать",
+    btnSave: "Сохранить в журнал",
+    logSummary: "Журнал ответов (локально в браузере)",
+    btnClearLog: "Очистить журнал",
+    copied: "Скопировано!",
+    saved: "Сохранено!",
+    emptyLog: "Записей пока нет.",
+    missingKey: "Сначала укажите Groq API ключ в настройках.",
+    missingInput: "Сначала вставьте или продиктуйте сообщение.",
+    ttsUnsupported: "Озвучивание не поддерживается в этом браузере."
+  }
+};
 
-Analyze the incoming message (which may be in Russian or English).
-1. Identify up to 3 specific dynamics in "hooks" written in ${uiLanguage === "ru" ? "Russian" : "English"} (such as relationship projection, parent-child enmeshment, guilt/codependency hook, autonomy pushback, or triangulation).
-2. Extract the literal core fact in 1 short sentence in ${uiLanguage === "ru" ? "Russian" : "English"}, stripping away relationship projections, guilt, urgency, and emotional enmeshment.
-3. Draft a kind, polite, natural reply in ${outLanguage === "ru" ? "Russian" : "English"} to send to the parent using the "${boundaryStance}" stance:
-   - Never use the word "boundary" / "boundaries" / "границы" and never lecture, correct, or try to control the parent.
-   - Be warm/kind on the surface while firmly keeping your own adult independence, separate life, and refusal to take on projected relationship drama or emotional caretaking.
-   - Keep it free of JADE (Justify, Argue, Defend, Explain).
-
-Return ONLY valid JSON with keys: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
+function selectPersona(persona) {
+  currentPersona = persona;
+  localStorage.setItem("pr_persona", persona);
+  document.querySelectorAll("#personaGroup .pill").forEach(btn => {
+    btn.classList.remove("active", "mother-active");
+    if (btn.dataset.persona === persona) {
+      btn.classList.add(persona === "mother" ? "mother-active" : "active");
     }
+  });
+  const isMother = persona === "mother";
+  document.getElementById("motherOptions").style.display = isMother ? "block" : "none";
+  document.getElementById("standardAudienceWrap").style.display = isMother ? "none" : "block";
+  document.getElementById("hooksSection").style.display = isMother ? "block" : "none";
+  document.getElementById("lblReply").textContent = isMother ? UI_TEXT[uiLang].replyMother : UI_TEXT[uiLang].replyStandard;
+}
 
-    function capToTwoSentences(text) {
-      const clean = text.replace(/\s+/g, " ").trim();
-      if (!clean) return "";
-      const matches = clean.match(/[^.!?…]+(?:[.!?…]+|$)/g) || [clean];
-      return matches.slice(0, 2).join(" ").trim();
+function selectAudience(aud) {
+  currentAudience = aud;
+  localStorage.setItem("pr_audience", aud);
+  document.getElementById("aOpponents").classList.toggle("active", aud === "opponents");
+  document.getElementById("aSelf").classList.toggle("active", aud === "self");
+}
+
+function applyUiLang() {
+  const t = UI_TEXT[uiLang];
+  document.documentElement.lang = uiLang;
+  document.getElementById("uiTitle").textContent = t.title;
+  document.getElementById("uiSubtitle").textContent = t.subtitle;
+  document.getElementById("uiSettingsBtn").textContent = t.settingsBtn;
+  document.getElementById("lblApiKey").textContent = t.apiKey;
+  document.getElementById("lblModel").textContent = t.model;
+  document.getElementById("btnFetchGroq").textContent = t.fetchGroq;
+  document.getElementById("lblGroqList").textContent = t.groqList;
+  document.getElementById("lblPersona").textContent = t.persona;
+  document.getElementById("pPriest").textContent = t.pPriest;
+  document.getElementById("pSenatorial").textContent = t.pSenatorial;
+  document.getElementById("pProfessor").textContent = t.pProfessor;
+  document.getElementById("pMother").textContent = t.pMother;
+  document.getElementById("uiGrounding").innerHTML = t.grounding;
+  document.getElementById("lblStance").textContent = t.stance;
+  document.getElementById("optMedium").textContent = t.optMedium;
+  document.getElementById("optGray").textContent = t.optGray;
+  document.getElementById("optFirm").textContent = t.optFirm;
+  document.getElementById("lblAudience").textContent = t.audience;
+  document.getElementById("aOpponents").textContent = t.aOpponents;
+  document.getElementById("aSelf").textContent = t.aSelf;
+  document.getElementById("lblIncoming").textContent = t.incoming;
+  document.getElementById("incoming").placeholder = t.placeholder;
+  document.getElementById("btnMic").textContent = isRecording ? t.micStop : t.micStart;
+  document.getElementById("lblReplyLang").textContent = t.replyLang;
+  document.getElementById("btnGenerate").textContent = t.btnGenerate;
+  document.getElementById("btnSummary").textContent = t.btnSummary;
+  document.getElementById("btnSpeak").textContent = isSpeaking ? t.btnStopSpeak : t.btnSpeak;
+  document.getElementById("btnWtf").textContent = t.btnWtf;
+  document.getElementById("lblSummaryOut").textContent = t.summaryOut;
+  document.getElementById("lblWtfOut").textContent = t.wtfOut;
+  document.getElementById("lblHooks").textContent = t.hooks;
+  document.getElementById("lblFact").textContent = t.fact;
+  document.getElementById("lblReply").textContent = currentPersona === "mother" ? t.replyMother : t.replyStandard;
+  document.getElementById("btnCopy").textContent = t.btnCopy;
+  document.getElementById("btnSave").textContent = t.btnSave;
+  document.getElementById("lblLogSummary").textContent = t.logSummary;
+  document.getElementById("btnClearLog").textContent = t.btnClearLog;
+  renderLog();
+}
+
+function toggleUiLang() {
+  uiLang = uiLang === "en" ? "ru" : "en";
+  localStorage.setItem("pr_uilang", uiLang);
+  applyUiLang();
+}
+
+window.onload = () => {
+  document.getElementById("apiKey").value = localStorage.getItem("pr_apikey") || localStorage.getItem("ber_apikey") || "";
+  const savedModel = localStorage.getItem("pr_model") || localStorage.getItem("ber_model");
+  document.getElementById("modelName").value = savedModel && savedModel !== "llama-3.1-8b-instant" ? savedModel : DEFAULT_GROQ_MODEL;
+  document.getElementById("lang").value = localStorage.getItem("pr_replylang") || "auto";
+  selectPersona(currentPersona);
+  selectAudience(currentAudience);
+  applyUiLang();
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.getVoices();
+  }
+};
+
+function toggleSettings() {
+  const p = document.getElementById("settingsPanel");
+  p.style.display = p.style.display === "none" ? "block" : "none";
+}
+
+function saveSettings() {
+  const key = document.getElementById("apiKey").value.trim();
+  const model = document.getElementById("modelName").value.trim() || DEFAULT_GROQ_MODEL;
+  localStorage.setItem("pr_apikey", key);
+  localStorage.setItem("ber_apikey", key);
+  localStorage.setItem("pr_model", model);
+  localStorage.setItem("ber_model", model);
+}
+
+function applySelectedGroqModel() {
+  const sel = document.getElementById("groqModelSelect");
+  if (!sel.value) return;
+  document.getElementById("modelName").value = sel.value;
+  saveSettings();
+}
+
+async function fetchGroqModels() {
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const statusEl = document.getElementById("apiStatus");
+  const wrapEl = document.getElementById("groqModelsWrap");
+  const selectEl = document.getElementById("groqModelSelect");
+  statusEl.className = "status-toast";
+  if (!apiKey) {
+    statusEl.className = "error-text";
+    statusEl.textContent = UI_TEXT[uiLang].missingKey;
+    return;
+  }
+  saveSettings();
+  statusEl.textContent = UI_TEXT[uiLang].fetchingGroq;
+  try {
+    const res = await fetch(GROQ_MODELS_URL, { headers: { "Authorization": `Bearer ${apiKey}` } });
+    if (!res.ok) throw new Error(`Groq Models ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    const list = (data.data || []).map(m => m.id).filter(id => id && !/whisper|guard|embedding|tts/i.test(id));
+    if (!list.length) {
+      statusEl.className = "error-text";
+      statusEl.textContent = UI_TEXT[uiLang].groqNone;
+      return;
     }
+    selectEl.innerHTML = list.map(id => `<option value="${id}">${id}</option>`).join("");
+    const current = document.getElementById("modelName").value.trim();
+    const chosen = list.includes(current) ? current : (list.find(id => /gpt-oss|llama-3\.3|qwen/i.test(id)) || list[0]);
+    document.getElementById("modelName").value = chosen;
+    selectEl.value = chosen;
+    saveSettings();
+    wrapEl.style.display = "block";
+    statusEl.textContent = `${UI_TEXT[uiLang].groqLoaded} ${list.length}`;
+  } catch (err) {
+    statusEl.className = "error-text";
+    statusEl.textContent = err.message || String(err);
+  }
+}
 
-    function applyUiLang() {
-      const t = UI_TEXT[uiLang];
-      document.documentElement.lang = uiLang;
-      document.getElementById("uiTitle").textContent = t.title;
-      document.getElementById("uiSubtitle").textContent = t.subtitle;
-      document.getElementById("uiSettingsBtn").textContent = t.settingsBtn;
-      document.getElementById("lblApiKey").textContent = t.apiKey;
-      document.getElementById("lblModel").textContent = t.model;
-      document.getElementById("btnFetchGroq").textContent = t.fetchGroq;
-      document.getElementById("lblGroqList").textContent = t.groqList;
-      document.getElementById("uiGrounding").innerHTML = t.grounding;
-      document.getElementById("lblIncoming").textContent = t.incoming;
-      document.getElementById("incoming").placeholder = t.placeholder;
-      document.getElementById("btnMic").textContent = isRecording ? t.micStop : t.micStart;
-      document.getElementById("lblStance").textContent = t.stance;
-      document.getElementById("optMedium").textContent = t.optMedium;
-      document.getElementById("optGray").textContent = t.optGray;
-      document.getElementById("optFirm").textContent = t.optFirm;
-      document.getElementById("lblReplyLang").textContent = t.replyLang;
-      document.getElementById("btnGenerate").textContent = t.btnGenerate;
-      document.getElementById("lblHooks").textContent = t.hooks;
-      document.getElementById("lblFact").textContent = t.fact;
-      document.getElementById("lblReply").textContent = t.reply;
-      document.getElementById("btnCopy").textContent = t.btnCopy;
-      document.getElementById("btnWtf").textContent = t.btnWtf;
-      document.getElementById("lblWtfOut").textContent = t.wtfOut;
-      document.getElementById("btnSpeak").textContent = isSpeaking ? t.btnStopSpeak : t.btnSpeak;
-      document.getElementById("btnSummary").textContent = t.btnSummary;
-      document.getElementById("lblSummaryOut").textContent = t.summaryOut;
-      document.getElementById("btnSave").textContent = t.btnSave;
-      document.getElementById("lblLogSummary").textContent = t.logSummary;
-      document.getElementById("btnClearLog").textContent = t.btnClearLog;
-      renderLog();
-    }
+function detectLanguage(text) {
+  return /[а-яА-ЯёЁ]/.test(text) ? "ru" : "en";
+}
 
-    function toggleUiLang() {
-      uiLang = uiLang === "ru" ? "en" : "ru";
-      localStorage.setItem("ber_uilang", uiLang);
-      applyUiLang();
-    }
+function capToTwoSentences(text) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  const matches = clean.match(/[^.!?…]+(?:[.!?…]+|$)/g) || [clean];
+  return matches.slice(0, 2).join(" ").trim();
+}
 
-    window.onload = () => {
-      localStorage.setItem("ber_provider", "groq");
-      document.getElementById("apiKey").value = localStorage.getItem("ber_apikey") || "";
-      const savedModel = localStorage.getItem("ber_model");
-      document.getElementById("modelName").value =
-        savedModel && savedModel !== "llama-3.1-8b-instant" ? savedModel : DEFAULT_GROQ_MODEL;
-      localStorage.setItem("ber_model", document.getElementById("modelName").value);
-      document.getElementById("lang").value = localStorage.getItem("ber_replylang") || "auto";
-      applyUiLang();
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.getVoices();
-      }
-    };
+function buildMotherPrompt(uiLanguage, outLanguage, boundaryStance) {
+  const uiName = uiLanguage === "ru" ? "Russian" : "English";
+  const outName = outLanguage === "ru" ? "Russian" : "English";
+  return `You are a clinical communication coach specializing in parent-child enmeshment, codependency, differentiation, and Transactional Analysis (Adult ego state).
+Analyze the mother's incoming message.
+1. Identify up to 3 subtle dynamics in "hooks" written in ${uiName} (e.g., enmeshment pull, codependency hook, guilt/urgency hook, relationship projection, or emotional caretaking bait).
+2. Extract the literal core fact in 1 short sentence in ${uiName}, stripping away guilt, anxiety, and enmeshment.
+3. Draft a cute, warm, polite, natural reply in ${outName} to send to Mom using the "${boundaryStance}" stance:
+   - Make it genuinely pleasant, light, and affectionate ("cute and nice"), so there is zero friction or pushback.
+   - CRITICAL: Do NOT dive into enmeshment or codependency. Do NOT deny her reality, do NOT argue, do NOT lecture or try to control her, and never use the word "boundary"/"границы".
+   - Zero JADE (Justify, Argue, Defend, Explain). Acknowledge warmly, keep your own adult independence intact, and smoothly close the loop so the user can move right on with their day.
 
-    function toggleSettings() {
-      const p = document.getElementById("settingsPanel");
-      p.style.display = p.style.display === "none" ? "block" : "none";
-    }
+Return ONLY valid JSON: {"hooks": ["..."], "fact": "...", "reply": "..."}`;
+}
 
-    function saveSettings() {
-      localStorage.setItem("ber_provider", "groq");
-      localStorage.setItem("ber_apikey", document.getElementById("apiKey").value.trim());
-      localStorage.setItem("ber_model", document.getElementById("modelName").value.trim() || DEFAULT_GROQ_MODEL);
-    }
+function buildPersonaPrompt(persona, audience, outLanguage) {
+  const outName = outLanguage === "ru" ? "Russian" : "English";
+  const personaVoices = {
+    priest: "a calm, dignified, compassionate yet spiritually resolute Priest speaking with moral clarity, pastoral poise, and timeless authority",
+    senatorial: "a sharp, composed, formal Senator in a Senatorial Hearing speaking on the record with procedural precision, constitutional gravity, and measured cross-examination discipline",
+    professor: "an erudite, analytical, lucid University Professor dismantling premises with structured logic, historical/empirical framing, and calm intellectual rigor"
+  };
+  const targetInstruction = audience === "self"
+    ? "Address the user directly ('To Yourself') as an insightful private briefing clarifying what is happening and how to stay grounded."
+    : "Write the direct spoken/written rebuttal ('To Opponents') ready to deliver immediately without meta-commentary.";
 
-    function applySelectedGroqModel() {
-      const sel = document.getElementById("groqModelSelect");
-      if (!sel.value) return;
-      document.getElementById("modelName").value = sel.value;
-      saveSettings();
-    }
+  return `You are ${personaVoices[persona] || personaVoices.priest}.
+${targetInstruction}
+Write in ${outName}. Keep it punchy, articulate, and persuasive (3–5 sentences). Return plain text only.`;
+}
 
-    function pickPreferredModel(list) {
-      const preferred = list.find(id => /gpt-oss|llama-3\.3|llama-4|qwen|gemma/i.test(id) && !/allam/i.test(id));
-      return preferred || list[0];
-    }
+async function generateResponse() {
+  if (isRecording && recognition) recognition.stop();
+  const incoming = document.getElementById("incoming").value.trim();
+  const outputCard = document.getElementById("outputCard");
+  const replyBox = document.getElementById("replyText");
+  if (!incoming) {
+    outputCard.style.display = "block";
+    replyBox.className = "reply-box error-text";
+    replyBox.textContent = UI_TEXT[uiLang].missingInput;
+    return;
+  }
 
-    async function fetchGroqModels() {
-      const apiKey = document.getElementById("apiKey").value.trim();
-      const statusEl = document.getElementById("apiStatus");
-      const wrapEl = document.getElementById("groqModelsWrap");
-      const selectEl = document.getElementById("groqModelSelect");
+  stopSpeaking();
+  document.getElementById("wtfWrap").style.display = "none";
+  document.getElementById("summaryWrap").style.display = "none";
 
-      statusEl.className = "status-toast";
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const model = document.getElementById("modelName").value.trim() || DEFAULT_GROQ_MODEL;
+  const selectedLang = document.getElementById("lang").value;
+  localStorage.setItem("pr_replylang", selectedLang);
+  const outLang = selectedLang === "auto" ? detectLanguage(incoming) : selectedLang;
 
-      if (!apiKey) {
-        statusEl.className = "error-text";
-        statusEl.textContent = UI_TEXT[uiLang].missingKey;
-        return;
-      }
+  outputCard.style.display = "block";
+  replyBox.className = "reply-box";
+  document.getElementById("hooksList").innerHTML = "";
+  document.getElementById("coreFact").textContent = "";
 
-      saveSettings();
-      statusEl.textContent = UI_TEXT[uiLang].fetchingGroq;
+  if (!apiKey) {
+    replyBox.className = "reply-box error-text";
+    replyBox.textContent = UI_TEXT[uiLang].missingKey;
+    document.getElementById("settingsPanel").style.display = "block";
+    return;
+  }
 
+  replyBox.textContent = uiLang === "ru" ? "Генерирую ответ..." : "Generating response...";
+  const isMother = currentPersona === "mother";
+  const systemPrompt = isMother
+    ? buildMotherPrompt(uiLang, outLang, document.getElementById("stance").value)
+    : buildPersonaPrompt(currentPersona, currentAudience, outLang);
+
+  const payload = {
+    model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: incoming }
+    ]
+  };
+  if (isMother) payload.response_format = { type: "json_object" };
+
+  try {
+    const r = await fetch(GROQ_CHAT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error(`GROQ API ${r.status}: ${await r.text()}`);
+    const data = await r.json();
+    const raw = (data.choices?.[0]?.message?.content || "").trim();
+
+    if (isMother) {
+      document.getElementById("hooksSection").style.display = "block";
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      let parsed;
       try {
-        const res = await fetch(GROQ_MODELS_URL, {
-          headers: { "Authorization": `Bearer ${apiKey}` }
-        });
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Groq Models ${res.status}: ${errText}`);
-        }
-        const data = await res.json();
-        const allModels = Array.isArray(data.data) ? data.data : [];
-
-        const chatModels = allModels
-          .map(m => m.id)
-          .filter(id => id && !/whisper|guard|embedding|tts|distil-whisper/i.test(id));
-
-        const finalList = chatModels.length > 0 ? chatModels : allModels.map(m => m.id).filter(Boolean);
-
-        if (finalList.length === 0) {
-          statusEl.className = "error-text";
-          statusEl.textContent = UI_TEXT[uiLang].groqNone;
-          wrapEl.style.display = "none";
-          return;
-        }
-
-        selectEl.innerHTML = finalList
-          .map(id => `<option value="${id}">${id}</option>`)
-          .join("");
-
-        const currentModel = document.getElementById("modelName").value.trim();
-        const chosen = finalList.includes(currentModel) && !/allam/i.test(currentModel)
-          ? currentModel
-          : pickPreferredModel(finalList);
-
-        document.getElementById("modelName").value = chosen;
-        selectEl.value = chosen;
-        saveSettings();
-
-        wrapEl.style.display = "block";
-        statusEl.textContent = `${UI_TEXT[uiLang].groqLoaded}${finalList.length} (${chosen})`;
-      } catch (err) {
-        statusEl.className = "error-text";
-        statusEl.textContent = err.message || String(err);
-      }
-    }
-
-    function toggleMic() {
-      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const statusEl = document.getElementById("micStatus");
-      const btnMic = document.getElementById("btnMic");
-      const ta = document.getElementById("incoming");
-
-      if (!SpeechRec) {
-        statusEl.className = "error-text";
-        statusEl.textContent = UI_TEXT[uiLang].micUnsupported;
-        return;
-      }
-
-      if (isRecording && recognition) {
-        recognition.stop();
-        return;
-      }
-
-      recognition = new SpeechRec();
-      const forcedLang = document.getElementById("lang").value;
-      if (forcedLang === "en") {
-        recognition.lang = "en-US";
-      } else if (forcedLang === "ru") {
-        recognition.lang = "ru-RU";
-      } else {
-        recognition.lang = uiLang === "ru" ? "ru-RU" : "en-US";
-      }
-
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-      baseTranscript = ta.value.trim();
-
-      recognition.onstart = () => {
-        isRecording = true;
-        statusEl.className = "status-toast";
-        btnMic.classList.add("mic-active");
-        btnMic.textContent = UI_TEXT[uiLang].micStop;
-        statusEl.textContent = UI_TEXT[uiLang].micListening;
-      };
-
-      recognition.onresult = (event) => {
-        let sessionFinal = "";
-        let interim = "";
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const piece = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            sessionFinal += piece;
-          } else {
-            interim += piece;
-          }
-        }
-
-        if (sessionFinal) {
-          baseTranscript = baseTranscript
-            ? `${baseTranscript.trim()} ${sessionFinal.trim()}`
-            : sessionFinal.trim();
-        }
-
-        ta.value = baseTranscript;
-
-        if (interim.trim()) {
-          statusEl.className = "interim-preview";
-          statusEl.textContent = `... ${interim.trim()}`;
-        } else {
-          statusEl.className = "status-toast";
-          statusEl.textContent = UI_TEXT[uiLang].micListening;
-        }
-      };
-
-      recognition.onerror = () => {
-        statusEl.className = "error-text";
-        statusEl.textContent = UI_TEXT[uiLang].micDenied;
-      };
-
-      recognition.onend = () => {
-        isRecording = false;
-        ta.value = baseTranscript.trim();
-        btnMic.classList.remove("mic-active");
-        btnMic.textContent = UI_TEXT[uiLang].micStart;
-        statusEl.className = "status-toast";
-        statusEl.textContent = "";
-      };
-
-      recognition.start();
-    }
-
-    function detectLanguage(text) {
-      return /[а-яА-ЯёЁ]/.test(text) ? "ru" : "en";
-    }
-
-    function stopSpeaking() {
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-      isSpeaking = false;
-      const btn = document.getElementById("btnSpeak");
-      btn.classList.remove("mic-active");
-      btn.textContent = UI_TEXT[uiLang].btnSpeak;
-    }
-
-    function toggleSpeakReply() {
-      if (!("speechSynthesis" in window)) {
-        showStatus(UI_TEXT[uiLang].ttsUnsupported);
-        return;
-      }
-
-      if (isSpeaking) {
-        stopSpeaking();
-        return;
-      }
-
-      const summaryVisible = document.getElementById("summaryWrap").style.display !== "none";
-      const summaryVal = document.getElementById("summaryText").textContent.trim();
-      const wtfVisible = document.getElementById("wtfWrap").style.display !== "none";
-      const wtfVal = document.getElementById("wtfText").textContent.trim();
-      const text = (summaryVisible && summaryVal)
-        ? summaryVal
-        : (wtfVisible && wtfVal)
-          ? wtfVal
-          : document.getElementById("replyText").textContent.trim();
-      if (!text) return;
-
-      window.speechSynthesis.cancel();
-
-      const langCode = detectLanguage(text) === "ru" ? "ru-RU" : "en-US";
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = langCode;
-
-      const voices = window.speechSynthesis.getVoices();
-      const matchedVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(langCode.slice(0, 2)));
-      if (matchedVoice) {
-        utterance.voice = matchedVoice;
-      }
-
-      const btn = document.getElementById("btnSpeak");
-      utterance.onstart = () => {
-        isSpeaking = true;
-        btn.classList.add("mic-active");
-        btn.textContent = UI_TEXT[uiLang].btnStopSpeak;
-      };
-      utterance.onend = stopSpeaking;
-      utterance.onerror = stopSpeaking;
-
-      window.speechSynthesis.speak(utterance);
-    }
-
-    async function explainWtf() {
-      if (isRecording && recognition) {
-        recognition.stop();
-      }
-
-      const incoming = document.getElementById("incoming").value.trim();
-      const hooks = document.getElementById("hooksList").textContent.trim();
-      const fact = document.getElementById("coreFact").textContent.trim();
-
-      const wrap = document.getElementById("wtfWrap");
-      const box = document.getElementById("wtfText");
-      wrap.style.display = "block";
-      box.className = "wtf-box";
-
-      if (!incoming && !fact) {
-        box.className = "wtf-box error-text";
-        box.textContent = UI_TEXT[uiLang].missingInput;
-        return;
-      }
-
-      const apiKey = document.getElementById("apiKey").value.trim();
-      let model = document.getElementById("modelName").value.trim();
-      if (!model || model === "llama-3.1-8b-instant") {
-        model = DEFAULT_GROQ_MODEL;
-        document.getElementById("modelName").value = model;
-        saveSettings();
-      }
-
-      if (!apiKey) {
-        box.className = "wtf-box error-text";
-        box.textContent = UI_TEXT[uiLang].missingKey;
-        document.getElementById("settingsPanel").style.display = "block";
-        return;
-      }
-
-      box.textContent = UI_TEXT[uiLang].wtfLoading;
-      const targetLang = uiLang === "ru" ? "Russian" : "English";
-
-      try {
-        const r = await fetch(GROQ_CHAT_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              {
-                role: "system",
-                content: `You are talking directly to the adult child as straight, unfiltered self-talk in ${targetLang}. Tell them bluntly in 2-3 punchy sentences what is actually going on: if the parent is just being noisy, doing monkey business, projecting their own relationships/drama, or fishing for emotional reaction, call it out plainly and tell them to ignore the trick and stay in their own lane.`
-              },
-              {
-                role: "user",
-                content: `Message: ${incoming}\nHooks: ${hooks}\nFact: ${fact}`
-              }
-            ]
-          })
-        });
-
-        if (!r.ok) {
-          const errBody = await r.text();
-          throw new Error(`GROQ API ${r.status}: ${errBody}`);
-        }
-
-        const data = await r.json();
-        box.textContent = (data.choices?.[0]?.message?.content || "").trim();
-      } catch (err) {
-        box.className = "wtf-box error-text";
-        box.textContent = err.message || String(err);
-      }
-    }
-
-    async function summarizeOutput() {
-      if (isRecording && recognition) {
-        recognition.stop();
-      }
-
-      const incoming = document.getElementById("incoming").value.trim();
-      const fact = document.getElementById("coreFact").textContent.trim();
-      const reply = document.getElementById("replyText").textContent.trim();
-      const sourceText = [fact, reply, incoming].filter(Boolean).join("\n");
-
-      const wrap = document.getElementById("summaryWrap");
-      const box = document.getElementById("summaryText");
-      wrap.style.display = "block";
-      box.className = "summary-box";
-
-      if (!sourceText) {
-        box.className = "summary-box error-text";
-        box.textContent = UI_TEXT[uiLang].missingInput;
-        return;
-      }
-
-      const apiKey = document.getElementById("apiKey").value.trim();
-      let model = document.getElementById("modelName").value.trim();
-      if (!model || model === "llama-3.1-8b-instant") {
-        model = DEFAULT_GROQ_MODEL;
-        document.getElementById("modelName").value = model;
-        saveSettings();
-      }
-
-      if (!apiKey) {
-        box.className = "summary-box error-text";
-        box.textContent = UI_TEXT[uiLang].missingKey;
-        document.getElementById("settingsPanel").style.display = "block";
-        return;
-      }
-
-      box.textContent = UI_TEXT[uiLang].summarizing;
-      const targetLang = detectLanguage(reply || sourceText) === "ru" ? "Russian" : "English";
-
-      try {
-        const r = await fetch(GROQ_CHAT_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              {
-                role: "system",
-                content: `Summarize the situation and boundary response in strictly 1 or 2 sentences maximum (never 3 or more sentences). Write in ${targetLang}. Be clear, grounded, and concise.`
-              },
-              { role: "user", content: sourceText }
-            ]
-          })
-        });
-
-        if (!r.ok) {
-          const errBody = await r.text();
-          throw new Error(`GROQ API ${r.status}: ${errBody}`);
-        }
-
-        const data = await r.json();
-        const rawSummary = data.choices?.[0]?.message?.content || "";
-        box.textContent = capToTwoSentences(rawSummary);
-      } catch (err) {
-        box.className = "summary-box error-text";
-        box.textContent = err.message || String(err);
-      }
-    }
-
-    function parseModelOutput(rawText) {
-      const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-      try {
-        return JSON.parse(cleaned);
+        parsed = JSON.parse(cleaned);
       } catch {
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (match) {
-          return JSON.parse(match[0]);
-        }
-        return { hooks: ["Groq Response"], fact: "", reply: cleaned };
+        const m = cleaned.match(/\{[\s\S]*\}/);
+        parsed = m ? JSON.parse(m[0]) : { hooks: ["Boundary Check"], fact: "", reply: cleaned };
       }
+      const hooks = Array.isArray(parsed.hooks) && parsed.hooks.length ? parsed.hooks : ["Enmeshment Check"];
+      document.getElementById("hooksList").innerHTML = hooks.map(h => `<span class="tag">${h}</span>`).join("");
+      document.getElementById("coreFact").textContent = parsed.fact || "";
+      replyBox.textContent = parsed.reply || "";
+    } else {
+      document.getElementById("hooksSection").style.display = "none";
+      replyBox.textContent = raw;
     }
+  } catch (err) {
+    replyBox.className = "reply-box error-text";
+    replyBox.textContent = err.message || String(err);
+  }
+}
 
-    async function analyzeWithGroq() {
-      if (isRecording && recognition) {
-        recognition.stop();
-      }
-      const incoming = document.getElementById("incoming").value.trim();
-      if (!incoming) return;
+async function summarizeOutput() {
+  if (isRecording && recognition) recognition.stop();
+  const reply = document.getElementById("replyText").textContent.trim();
+  const incoming = document.getElementById("incoming").value.trim();
+  const sourceText = reply || incoming;
+  const wrap = document.getElementById("summaryWrap");
+  const box = document.getElementById("summaryText");
+  wrap.style.display = "block";
+  box.className = "summary-box";
+  if (!sourceText) {
+    box.className = "summary-box error-text";
+    box.textContent = UI_TEXT[uiLang].missingInput;
+    return;
+  }
+  const apiKey = document.getElementById("apiKey").value.trim();
+  if (!apiKey) {
+    box.className = "summary-box error-text";
+    box.textContent = UI_TEXT[uiLang].missingKey;
+    return;
+  }
+  box.textContent = UI_TEXT[uiLang].summarizing;
+  const targetLang = detectLanguage(sourceText) === "ru" ? "Russian" : "English";
+  try {
+    const r = await fetch(GROQ_CHAT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: document.getElementById("modelName").value.trim() || DEFAULT_GROQ_MODEL,
+        messages: [
+          { role: "system", content: `Summarize in strictly 1 or 2 sentences maximum in ${targetLang}. Clear, calm, concise.` },
+          { role: "user", content: sourceText }
+        ]
+      })
+    });
+    if (!r.ok) throw new Error(`GROQ API ${r.status}: ${await r.text()}`);
+    const data = await r.json();
+    box.textContent = capToTwoSentences(data.choices?.[0]?.message?.content || "");
+  } catch (err) {
+    box.className = "summary-box error-text";
+    box.textContent = err.message || String(err);
+  }
+}
 
-      stopSpeaking();
-      document.getElementById("wtfWrap").style.display = "none";
-      document.getElementById("wtfText").textContent = "";
-      document.getElementById("summaryWrap").style.display = "none";
-      document.getElementById("summaryText").textContent = "";
+async function explainWtf() {
+  if (isRecording && recognition) recognition.stop();
+  const incoming = document.getElementById("incoming").value.trim();
+  const wrap = document.getElementById("wtfWrap");
+  const box = document.getElementById("wtfText");
+  wrap.style.display = "block";
+  box.className = "wtf-box";
+  if (!incoming) {
+    box.className = "wtf-box error-text";
+    box.textContent = UI_TEXT[uiLang].missingInput;
+    return;
+  }
+  const apiKey = document.getElementById("apiKey").value.trim();
+  if (!apiKey) {
+    box.className = "wtf-box error-text";
+    box.textContent = UI_TEXT[uiLang].missingKey;
+    return;
+  }
+  box.textContent = UI_TEXT[uiLang].wtfLoading;
+  const targetLang = uiLang === "ru" ? "Russian" : "English";
+  try {
+    const r = await fetch(GROQ_CHAT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: document.getElementById("modelName").value.trim() || DEFAULT_GROQ_MODEL,
+        messages: [
+          { role: "system", content: `Give blunt, unfiltered self-talk in 2-3 punchy sentences in ${targetLang} explaining the hidden subtext, guilt-hook, or manipulation in this message so the user doesn't take the bait.` },
+          { role: "user", content: incoming }
+        ]
+      })
+    });
+    if (!r.ok) throw new Error(`GROQ API ${r.status}: ${await r.text()}`);
+    const data = await r.json();
+    box.textContent = (data.choices?.[0]?.message?.content || "").trim();
+  } catch (err) {
+    box.className = "wtf-box error-text";
+    box.textContent = err.message || String(err);
+  }
+}
 
-      const apiKey = document.getElementById("apiKey").value.trim();
-      let model = document.getElementById("modelName").value.trim();
-      if (!model || model === "llama-3.1-8b-instant") {
-        model = DEFAULT_GROQ_MODEL;
-        document.getElementById("modelName").value = model;
-        saveSettings();
-      }
+function toggleMic() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const statusEl = document.getElementById("micStatus");
+  const btnMic = document.getElementById("btnMic");
+  const ta = document.getElementById("incoming");
+  if (!SpeechRec) {
+    statusEl.className = "error-text";
+    statusEl.textContent = UI_TEXT[uiLang].micUnsupported;
+    return;
+  }
+  if (isRecording && recognition) {
+    recognition.stop();
+    return;
+  }
+  recognition = new SpeechRec();
+  const forcedLang = document.getElementById("lang").value;
+  recognition.lang = forcedLang === "ru" ? "ru-RU" : forcedLang === "en" ? "en-US" : (uiLang === "ru" ? "ru-RU" : "en-US");
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  baseTranscript = ta.value.trim();
 
-      const stance = document.getElementById("stance").value;
-      const selectedLang = document.getElementById("lang").value;
-      localStorage.setItem("ber_replylang", selectedLang);
-
-      const outLang = selectedLang === "auto" ? detectLanguage(incoming) : selectedLang;
-
-      document.getElementById("outputCard").style.display = "block";
-      document.getElementById("hooksList").innerHTML = "";
-      document.getElementById("coreFact").textContent = "";
-      document.getElementById("replyText").className = "reply-box";
-
-      if (!apiKey) {
-        document.getElementById("replyText").className = "reply-box error-text";
-        document.getElementById("replyText").textContent = UI_TEXT[uiLang].missingKey;
-        document.getElementById("settingsPanel").style.display = "block";
-        return;
-      }
-
-      document.getElementById("replyText").textContent = uiLang === "ru" ? "Groq анализирует сообщение..." : "Groq analyzing message...";
-
-      const systemPrompt = buildSystemPrompt(uiLang, outLang, stance);
-
-      try {
-        const r = await fetch(GROQ_CHAT_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: incoming }
-            ],
-            response_format: { type: "json_object" }
-          })
-        });
-
-        if (!r.ok) {
-          const errBody = await r.text();
-          throw new Error(`GROQ API ${r.status}: ${errBody}`);
-        }
-
-        const data = await r.json();
-        const raw = data.choices?.[0]?.message?.content || "{}";
-        const parsed = parseModelOutput(raw);
-
-        const hooksArr = Array.isArray(parsed.hooks) && parsed.hooks.length > 0 ? parsed.hooks : ["Groq Analysis"];
-        document.getElementById("hooksList").innerHTML = hooksArr.map(h => `<span class="tag">${h}</span>`).join("");
-        document.getElementById("coreFact").textContent = parsed.fact || "";
-        document.getElementById("replyText").textContent = parsed.reply || "";
-      } catch (err) {
-        document.getElementById("replyText").className = "reply-box error-text";
-        document.getElementById("replyText").textContent = err.message || String(err);
-      }
+  recognition.onstart = () => {
+    isRecording = true;
+    statusEl.className = "status-toast";
+    btnMic.classList.add("mic-active");
+    btnMic.textContent = UI_TEXT[uiLang].micStop;
+    statusEl.textContent = UI_TEXT[uiLang].micListening;
+  };
+  recognition.onresult = (event) => {
+    let sessionFinal = "";
+    let interim = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const piece = event.results[i][0].transcript;
+      if (event.results[i].isFinal) sessionFinal += piece;
+      else interim += piece;
     }
-
-    function showStatus(msg) {
-      const el = document.getElementById("copyStatus");
-      el.textContent = msg;
-      setTimeout(() => { el.textContent = ""; }, 2000);
+    if (sessionFinal) {
+      baseTranscript = baseTranscript ? `${baseTranscript} ${sessionFinal.trim()}` : sessionFinal.trim();
     }
+    ta.value = baseTranscript;
+    statusEl.className = interim.trim() ? "interim-preview" : "status-toast";
+    statusEl.textContent = interim.trim() ? `...${interim.trim()}` : UI_TEXT[uiLang].micListening;
+  };
+  recognition.onerror = () => {
+    statusEl.className = "error-text";
+    statusEl.textContent = UI_TEXT[uiLang].micDenied;
+  };
+  recognition.onend = () => {
+    isRecording = false;
+    ta.value = baseTranscript.trim();
+    btnMic.classList.remove("mic-active");
+    btnMic.textContent = UI_TEXT[uiLang].micStart;
+    statusEl.textContent = "";
+  };
+  recognition.start();
+}
 
-    function copyReply() {
-      const summaryVisible = document.getElementById("summaryWrap").style.display !== "none";
-      const summaryVal = document.getElementById("summaryText").textContent.trim();
-      const text = (summaryVisible && summaryVal)
-        ? summaryVal
-        : document.getElementById("replyText").textContent;
-      navigator.clipboard.writeText(text);
-      showStatus(UI_TEXT[uiLang].copied);
-    }
+function stopSpeaking() {
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  isSpeaking = false;
+  const btn = document.getElementById("btnSpeak");
+  btn.classList.remove("mic-active");
+  btn.textContent = UI_TEXT[uiLang].btnSpeak;
+}
 
-    function saveToLog() {
-      const logs = JSON.parse(localStorage.getItem("ber_logs") || "[]");
-      logs.unshift({
-        date: new Date().toLocaleString(),
-        incoming: document.getElementById("incoming").value.trim(),
-        reply: document.getElementById("replyText").textContent
-      });
-      localStorage.setItem("ber_logs", JSON.stringify(logs.slice(0, 25)));
-      renderLog();
-      showStatus(UI_TEXT[uiLang].saved);
-    }
+function toggleSpeakReply() {
+  if (!("speechSynthesis" in window)) return;
+  if (isSpeaking) { stopSpeaking(); return; }
+  const summaryVal = document.getElementById("summaryWrap").style.display !== "none" ? document.getElementById("summaryText").textContent.trim() : "";
+  const wtfVal = document.getElementById("wtfWrap").style.display !== "none" ? document.getElementById("wtfText").textContent.trim() : "";
+  const text = summaryVal || wtfVal || document.getElementById("replyText").textContent.trim();
+  if (!text) return;
+  window.speechSynthesis.cancel();
+  const langCode = detectLanguage(text) === "ru" ? "ru-RU" : "en-US";
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = langCode;
+  const match = window.speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith(langCode.slice(0, 2)));
+  if (match) utterance.voice = match;
+  const btn = document.getElementById("btnSpeak");
+  utterance.onstart = () => { isSpeaking = true; btn.classList.add("mic-active"); btn.textContent = UI_TEXT[uiLang].btnStopSpeak; };
+  utterance.onend = stopSpeaking;
+  utterance.onerror = stopSpeaking;
+  window.speechSynthesis.speak(utterance);
+}
 
-    function renderLog() {
-      const logs = JSON.parse(localStorage.getItem("ber_logs") || "[]");
-      const container = document.getElementById("logContainer");
-      if (logs.length === 0) {
-        container.innerHTML = `<div style="color:var(--muted); font-size:0.85rem;">${UI_TEXT[uiLang].emptyLog}</div>`;
-        return;
-      }
-      container.innerHTML = logs.map(item => `
-        <div class="log-item">
-          <div style="color:var(--muted); font-size:0.75rem;">${item.date}</div>
-          <div><strong>In:</strong> ${item.incoming}</div>
-          <div style="color:var(--ok); margin-top:4px;"><strong>Out:</strong> ${item.reply}</div>
-        </div>
-      `).join("");
-    }
+function showStatus(msg) {
+  const el = document.getElementById("copyStatus");
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ""; }, 2000);
+}
 
-    function clearLog() {
-      localStorage.removeItem("ber_logs");
-      renderLog();
-    }
-  </script>
+function copyReply() {
+  const text = document.getElementById("replyText").textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text);
+  showStatus(UI_TEXT[uiLang].copied);
+}
+
+function saveToLog() {
+  const logs = JSON.parse(localStorage.getItem("pr_logs") || "[]");
+  logs.unshift({
+    date: new Date().toLocaleString(),
+    mode: currentPersona.toUpperCase(),
+    incoming: document.getElementById("incoming").value.trim(),
+    reply: document.getElementById("replyText").textContent
+  });
+  localStorage.setItem("pr_logs", JSON.stringify(logs.slice(0, 30)));
+  renderLog();
+  showStatus(UI_TEXT[uiLang].saved);
+}
+
+function renderLog() {
+  const logs = JSON.parse(localStorage.getItem("pr_logs") || "[]");
+  const container = document.getElementById("logContainer");
+  if (!logs.length) {
+    container.innerHTML = `<div style="color:var(--muted); font-size:0.85rem;">${UI_TEXT[uiLang].emptyLog}</div>`;
+    return;
+  }
+  container.innerHTML = logs.map(item => `
+    <div class="log-item">
+      <div style="color:var(--muted); font-size:0.75rem;">${item.date} · <strong>${item.mode || ""}</strong></div>
+      <div><strong>In:</strong> ${item.incoming}</div>
+      <div style="color:var(--ok); margin-top:4px;"><strong>Out:</strong> ${item.reply}</div>
+    </div>
+  `).join("");
+}
+
+function clearLog() {
+  localStorage.removeItem("pr_logs");
+  renderLog();
+}
+</script>
 </body>
 </html>
